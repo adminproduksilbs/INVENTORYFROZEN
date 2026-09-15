@@ -17,7 +17,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
 
-  <!-- Firebase App & Realtime Database (Compat SDK for easy single-file deployment) -->
+  <!-- Firebase App & Realtime Database -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -52,26 +52,22 @@
       <!-- Status Koneksi Realtime -->
       <span id="firebaseStatusBadge" class="badge bg-secondary d-flex align-items-center py-2 px-3">
         <span class="status-dot status-offline" id="statusDot"></span>
-        <span id="statusText">Checking Firebase...</span>
+        <span id="statusText">Menghubungkan...</span>
       </span>
-      <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#modalFirebaseConfig" title="Koneksi Database">
-        <i class="bi bi-gear-fill"></i> Setup Firebase
-      </button>
     </div>
   </div>
 </nav>
 
 <div class="container-fluid py-4 px-md-4">
 
-  <!-- Control Header: Pilih Arsip Tanggal / Buat Baru -->
+  <!-- Control Header: Sesi Tanggal -->
   <div class="card shadow-sm border-0 mb-4 bg-white">
     <div class="card-body py-3">
       <div class="row align-items-center g-3">
         <div class="col-md-5">
-          <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-calendar-event me-1"></i> SESI OPNAME TERPILIH / BUKA DATA LAMA:</label>
+          <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-calendar-event me-1"></i> SESI OPNAME / BUKA DATA LAMA:</label>
           <div class="input-group">
             <select id="selectSession" class="form-select fw-bold text-primary" onchange="switchSession(this.value)">
-              <!-- Diisi daftar sesi/tanggal opname dari Firebase -->
             </select>
             <button class="btn btn-outline-primary" onclick="promptNewSession()"><i class="bi bi-plus-circle me-1"></i> Buat Opname Baru</button>
           </div>
@@ -108,7 +104,7 @@
 
   <div class="tab-content">
     
-    <!-- TAB 1: SCAN BARCODE & OPNAME (Utama di Cold Storage) -->
+    <!-- TAB 1: SCAN BARCODE & OPNAME -->
     <div class="tab-pane fade show active" id="opnameTab">
       <div class="row g-4">
         <div class="col-lg-5">
@@ -118,7 +114,6 @@
               <span class="badge bg-light text-primary"><i class="bi bi-broadcast"></i> Scanner Ready</span>
             </div>
             <div class="card-body">
-              
               <ul class="nav nav-tabs mb-3" role="tablist">
                 <li class="nav-item">
                   <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#gunScannerTab">
@@ -160,15 +155,14 @@
               <div id="scanStatusAlert" class="alert alert-info d-none mb-3"></div>
 
               <div class="p-3 bg-light rounded border">
-                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Shortcut Uji Coba:</h6>
+                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Shortcut Cepat Tes:</h6>
                 <div class="d-flex flex-wrap gap-1">
-                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('SLP-01')">SLP-01 (Slipper)</button>
-                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('GRP-04')">GRP-04 (Grouper)</button>
-                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('OCT-LEG')">OCT-LEG (Cooked)</button>
-                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('OCT-TM')">OCT-TM (SV TM)</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('SLP-01')">SLP-01</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('GRP-04')">GRP-04</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('OCT-LEG')">OCT-LEG</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('OCT-TM')">OCT-TM</button>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
@@ -294,7 +288,7 @@
           <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
               <h5 class="card-title fw-bold mb-0">Daftar Item & Barcode Sesi Ini</h5>
-              <small class="text-muted">Perubahan langsung tersinkronisasi ke Firebase secara realtime</small>
+              <small class="text-muted">Perubahan otomatis tersinkronisasi ke Firebase secara realtime</small>
             </div>
             <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalTambahProduk">
               <i class="bi bi-plus-circle me-1"></i> Tambah Produk / Size Baru
@@ -364,42 +358,6 @@
       </div>
     </div>
 
-  </div>
-</div>
-
-<!-- MODAL SETUP FIREBASE CONFIG -->
-<div class="modal fade" id="modalFirebaseConfig" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header bg-dark text-white">
-        <h5 class="modal-title"><i class="bi bi-fire text-warning me-2"></i>Pengaturan Firebase Realtime</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="small text-muted">
-          Paste <code>firebaseConfig</code> dari Firebase Console proyek Anda agar semua perangkat (HP, laptop gudang, PC kantor) saling terhubung secara realtime.
-        </p>
-        <div class="mb-3">
-          <label class="form-label fw-bold small">Firebase Config JSON / Object:</label>
-          <textarea id="firebaseConfigInput" class="form-control font-monospace" rows="7" placeholder='{
-  "apiKey": "AIzaSy...",
-  "authDomain": "lbs-inventory.firebaseapp.com",
-  "databaseURL": "https://lbs-inventory-default-rtdb.firebaseio.com",
-  "projectId": "lbs-inventory",
-  "storageBucket": "lbs-inventory.appspot.com",
-  "messagingSenderId": "...",
-  "appId": "..."
-}'></textarea>
-        </div>
-        <div class="alert alert-info small py-2">
-          Jika belum diisi, aplikasi tetap bisa berjalan dengan penyimpanan lokal (LocalStorage).
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-        <button type="button" class="btn btn-primary" onclick="saveFirebaseConfig()"><i class="bi bi-save me-1"></i> Simpan & Hubungkan</button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -509,11 +467,20 @@
   </div>
 </div>
 
-<!-- Bootstrap Bundle JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// Data Master Standar PT Lampung Bay Seafood
+// Konfigurasi Firebase Proyek Anda (Sudah langsung tertanam)
+const firebaseConfig = {
+  apiKey: "AIzaSyAqta6QshdlBm94KTYZYO_8nJu_vxUsmLA",
+  authDomain: "lbs-inventory-85220.firebaseapp.com",
+  databaseURL: "https://lbs-inventory-85220-default-rtdb.firebaseio.com",
+  projectId: "lbs-inventory-85220",
+  storageBucket: "lbs-inventory-85220.firebasestorage.app",
+  messagingSenderId: "870336592213",
+  appId: "1:870336592213:web:4d520c7db3d14a832097dc"
+};
+
 const defaultItemsTemplate = [
   { barcode: "SLP-01", kategori: "FORZEN SLIPER MEAT", size: "Size U-2 Oz", kodeProduksi: "PRD-SLP-01", unit: "Bag", sysQty: 1638, sysLbs: 8190, opQty: 1638, opLbs: 8190, ket: "" },
   { barcode: "GRP-01", kategori: "FROZEN FARMER GROUPER SKIN LESS", size: "4-6 oz", kodeProduksi: "PRD-GRP-01", unit: "Mc", sysQty: 0, sysLbs: 0, opQty: 0, opLbs: 0, ket: "" },
@@ -543,64 +510,37 @@ const defaultItemsTemplate = [
   { barcode: "CRB-01", kategori: "FROZEN CRABMEAT- CCF", size: "Standard", kodeProduksi: "PRD-CRB-01", unit: "Bag", sysQty: 290, sysLbs: 290, opQty: 290, opLbs: 290, ket: "" }
 ];
 
-// State Variabel
 let firebaseDb = null;
-let currentSessionKey = "2026-08-31"; // Default session sesuai dokumen
+let currentSessionKey = "2026-08-31";
 let currentDocNomor = "008/KEU/OPNAME/LBS/AGUST/2026";
 let allSessions = {};
 let currentItems = [];
 
-// Inisialisasi Firebase Realtime
 function initFirebase() {
-  const savedCfg = localStorage.getItem('LBS_FIREBASE_CONFIG');
-  if (savedCfg) {
-    try {
-      const config = JSON.parse(savedCfg);
-      if (!firebase.apps.length) {
-        firebase.initializeApp(config);
-      }
-      firebaseDb = firebase.database();
-      
-      // Update UI Status
-      document.getElementById('statusDot').className = 'status-dot status-online';
-      document.getElementById('statusText').innerText = 'Firebase Online';
-      document.getElementById('firebaseStatusBadge').className = 'badge bg-success d-flex align-items-center py-2 px-3';
-
-      listenToFirebaseSessions();
-      return;
-    } catch(e) {
-      console.error("Gagal init Firebase:", e);
-    }
-  }
-
-  // Fallback ke LocalStorage jika belum setup Firebase
-  document.getElementById('statusDot').className = 'status-dot status-offline';
-  document.getElementById('statusText').innerText = 'Mode Lokal (Offline)';
-  document.getElementById('firebaseStatusBadge').className = 'badge bg-warning text-dark d-flex align-items-center py-2 px-3';
-  loadLocalSessions();
-}
-
-// Simpan Config Firebase dari Modal
-function saveFirebaseConfig() {
-  const raw = document.getElementById('firebaseConfigInput').value.trim();
   try {
-    // Validasi parse JSON
-    const parsed = JSON.parse(raw);
-    localStorage.setItem('LBS_FIREBASE_CONFIG', JSON.stringify(parsed));
-    alert('Konfigurasi Firebase berhasil disimpan! Halaman akan memuat ulang.');
-    location.reload();
-  } catch(err) {
-    alert('Format JSON tidak valid! Pastikan tanda petik dua dan koma sudah benar.');
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    firebaseDb = firebase.database();
+    
+    document.getElementById('statusDot').className = 'status-dot status-online';
+    document.getElementById('statusText').innerText = 'Firebase Online';
+    document.getElementById('firebaseStatusBadge').className = 'badge bg-success d-flex align-items-center py-2 px-3';
+
+    listenToFirebaseSessions();
+  } catch(e) {
+    console.error("Firebase Error:", e);
+    document.getElementById('statusDot').className = 'status-dot status-offline';
+    document.getElementById('statusText').innerText = 'Mode Lokal';
+    loadLocalSessions();
   }
 }
 
-// 1. Listen Realtime dari Firebase
 function listenToFirebaseSessions() {
   const sessionsRef = firebaseDb.ref('inventory_sessions');
   sessionsRef.on('value', (snapshot) => {
     const data = snapshot.val();
     if (!data) {
-      // Seed data awal jika database masih kosong
       seedInitialFirebaseData();
     } else {
       allSessions = data;
@@ -621,7 +561,6 @@ function seedInitialFirebaseData() {
   firebaseDb.ref('inventory_sessions').set(initialData);
 }
 
-// Fallback Local Storage
 function loadLocalSessions() {
   allSessions = JSON.parse(localStorage.getItem('LBS_LOCAL_SESSIONS')) || {
     [currentSessionKey]: {
@@ -634,18 +573,13 @@ function loadLocalSessions() {
   loadCurrentSessionData();
 }
 
-function saveLocalSessions() {
-  localStorage.setItem('LBS_LOCAL_SESSIONS', JSON.stringify(allSessions));
-  renderAll();
-}
-
-// Sinkronisasi Sesi ke Database / Local
 function persistSession(sessionKey, sessionData) {
   if (firebaseDb) {
     firebaseDb.ref('inventory_sessions/' + sessionKey).set(sessionData);
   } else {
     allSessions[sessionKey] = sessionData;
-    saveLocalSessions();
+    localStorage.setItem('LBS_LOCAL_SESSIONS', JSON.stringify(allSessions));
+    renderAll();
   }
 }
 
@@ -683,12 +617,12 @@ function loadCurrentSessionData() {
 
 function promptNewSession() {
   const now = new Date();
-  const defaultDateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+  const defaultDateStr = now.toISOString().split('T')[0];
   const dateInput = prompt("Masukkan Tanggal Opname Baru (Format YYYY-MM-DD):", defaultDateStr);
   if (!dateInput) return;
 
   if (allSessions[dateInput]) {
-    alert("Sesi opname tanggal ini sudah ada! Membuka sesi yang sudah ada.");
+    alert("Sesi tanggal ini sudah ada!");
     currentSessionKey = dateInput;
     loadCurrentSessionData();
     return;
@@ -696,7 +630,6 @@ function promptNewSession() {
 
   const docNo = prompt("Masukkan Nomor Berita Acara:", `009/KEU/OPNAME/LBS/${now.toLocaleString('id-ID', {month:'short'}).toUpperCase()}/${now.getFullYear()}`);
   
-  // Clone template barang untuk sesi baru
   const newSessionData = {
     docNomor: docNo || "001/KEU/OPNAME/LBS",
     tanggal: now.toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' }),
@@ -715,7 +648,6 @@ function updateDocMeta() {
   }
 }
 
-// Render Tabel & Dashboard
 function renderAll() {
   renderInventoryTable();
   renderDashboard();
@@ -900,9 +832,6 @@ function renderLaporan() {
   flushSubtotal();
 }
 
-// ------------------------------------
-// BARCODE SCANNER LOGIC + AUDIO BEEP
-// ------------------------------------
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 function playBeep() {
   try {
@@ -983,7 +912,6 @@ function processBarcodeSearch(rawCode) {
   document.getElementById('barcodeScannerInput').value = '';
 }
 
-// Live Camera
 let html5QrCode = null;
 function initCamera() {
   if (html5QrCode && html5QrCode.isScanning) return;
@@ -1003,7 +931,6 @@ function stopCamera() {
   }
 }
 
-// Form Opname Save (Update ke Firebase Realtime)
 document.getElementById('formOpnameUpdate').addEventListener('submit', function(e) {
   e.preventDefault();
   const idx = document.getElementById('opnameItemIndex').value;
@@ -1036,7 +963,6 @@ function resetOpnameForm() {
   document.getElementById('scanStatusAlert').classList.add('d-none');
 }
 
-// Tambah Produk Baru
 document.getElementById('formTambahProdukBaru').addEventListener('submit', function(e) {
   e.preventDefault();
   const newItem = {
@@ -1066,7 +992,6 @@ document.getElementById('formTambahProdukBaru').addEventListener('submit', funct
   bootstrap.Modal.getInstance(document.getElementById('modalTambahProduk')).hide();
 });
 
-// Modal Cetak Barcode Label
 function showBarcodeModal(idx) {
   const item = currentItems[idx];
   document.getElementById('lblNama').innerText = item.kategori;
@@ -1094,7 +1019,6 @@ function printBarcodeLabel() {
   location.reload();
 }
 
-// Export Excel (.xlsx)
 function exportToExcel() {
   const sess = allSessions[currentSessionKey] || {};
   const docNo = sess.docNomor || currentDocNomor;
@@ -1145,7 +1069,6 @@ function exportToExcel() {
   XLSX.writeFile(wb, `Berita_Acara_Opname_${currentSessionKey}.xlsx`);
 }
 
-// Export PDF (.pdf)
 function exportToPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('l', 'pt', 'a4');
@@ -1249,7 +1172,7 @@ function exportToPDF() {
   doc.save(`Berita_Acara_Opname_${currentSessionKey}.pdf`);
 }
 
-// Inisialisasi Pertama Kali
+// Inisialisasi otomatis
 initFirebase();
 </script>
 
