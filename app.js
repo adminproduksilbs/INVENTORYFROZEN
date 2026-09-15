@@ -28,20 +28,35 @@ document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>nav(n.dataset.page));
 async function renderDashboard(){
  await loadProducts();await loadTransactions();await loadOpnames();
  const total=products.length,stok=products.reduce((a,p)=>a+Number(p.stok||0),0),aktif=products.filter(p=>p.aktif!==false).length;
- $("content").innerHTML=`<div class="stats">
- <div class="card stat">Total Produk<b>${total}</b></div><div class="card stat">Produk Aktif<b>${aktif}</b></div>
- <div class="card stat">Total Stok<b>${money(stok)}</b></div><div class="card stat">Stok Opname<b>${opnames.length}</b></div></div>
- <div class="card chart-card" style="margin-top:15px"><div class="dashboard-head"><div><h3>📊 Grafik Stok Semua Produk</h3><p class="small">Menampilkan stok terkini seluruh produk.</p></div></div><div class="chart-wrap"><canvas id="stockChart"></canvas></div></div>
- <div class="grid"><div class="card"><h3>📦 Master Produk</h3><p>Kelola kode, barcode, kategori, satuan, berat dan stok awal.</p><button class="btn primary" onclick="nav('products')">Buka Produk</button></div>
- <div class="card"><h3>📊 Inventory</h3><p>Lihat stok terkini dan lakukan stok masuk/keluar.</p><button class="btn primary" onclick="nav('inventory')">Buka Inventory</button></div>
- <div class="card"><h3>🏭 Produksi</h3><p>Tambah hasil produksi ke stok dengan scan barcode atau input manual.</p><button class="btn primary" onclick="nav('production')">Buka Produksi</button></div>
- <div class="card"><h3>📝 Stok Opname</h3><p>Bandingkan stok sistem dengan stok fisik dan finalisasi penyesuaian.</p><button class="btn primary" onclick="nav('opname')">Buka Opname</button></div>
- <div class="card"><h3>📄 Laporan</h3><p>Export Excel dan PDF Berita Acara Stok Opname.</p><button class="btn primary" onclick="nav('reports')">Buka Laporan</button></div></div>
- <div class="card" style="margin-top:15px"><h3>Transaksi Terakhir</h3>${transactionTable(transactions.slice(0,8))}</div>`;
- const canvas=document.getElementById('stockChart');
- if(canvas && window.Chart){
-   const sorted=[...products].sort((a,b)=>Number(b.stok||0)-Number(a.stok||0));
-   new Chart(canvas,{type:'bar',data:{labels:sorted.map(p=>p.kodeProduk||p.namaProduk||'Produk'),datasets:[{label:'Stok',data:sorted.map(p=>Number(p.stok||0))}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>`Stok: ${Number(c.raw||0).toLocaleString('id-ID')}`}}},scales:{x:{ticks:{autoSkip:false,maxRotation:45,minRotation:0}},y:{beginAtZero:true,ticks:{precision:0}}}}});
+ const today=new Date();
+ const dayStart=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+ const todayTrx=transactions.filter(t=>{const x=t.createdAt?.toDate?t.createdAt.toDate():new Date(t.createdAt);return !isNaN(x)&&x>=dayStart});
+ const masukHari=todayTrx.filter(t=>t.type==='in'||t.type==='production').reduce((a,t)=>a+Number(t.qty||0),0);
+ const keluarHari=todayTrx.filter(t=>t.type==='out').reduce((a,t)=>a+Number(t.qty||0),0);
+ const dateText=today.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+ const days=[];for(let i=6;i>=0;i--){const d=new Date(dayStart);d.setDate(d.getDate()-i);days.push(d)}
+ const dayLabels=days.map(d=>d.toLocaleDateString('id-ID',{day:'2-digit',month:'short'}));
+ const sumForDay=(d,types)=>transactions.filter(t=>{const x=t.createdAt?.toDate?t.createdAt.toDate():new Date(t.createdAt);return !isNaN(x)&&x.getFullYear()===d.getFullYear()&&x.getMonth()===d.getMonth()&&x.getDate()===d.getDate()&&types.includes(t.type)}).reduce((a,t)=>a+Number(t.qty||0),0);
+ const in7=days.map(d=>sumForDay(d,['in','production']));const out7=days.map(d=>sumForDay(d,['out']));
+ const cats={};products.forEach(p=>{const c=p.kategori||'Tanpa Kategori';cats[c]=(cats[c]||0)+1});
+ const catRows=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+ const recent=transactions.slice(0,8);
+ $('content').innerHTML=`
+ <div class="dashboard-head dashboard-titlebar"><div><h2>Dashboard</h2><p>Selamat datang di LBS Inventory. Berikut ringkasan stok dan aktivitas terbaru.</p></div><div class="dashboard-meta"><span>📅 ${dateText}</span><i></i><span class="online"><b></b> Online</span></div></div>
+ <div class="stats dashboard-stats">
+  <div class="card stat stat-blue"><div class="stat-icon">📦</div><div><span class="stat-label">Total Produk</span><b>${money(total)}</b><small>produk terdaftar</small></div></div>
+  <div class="card stat stat-green"><div class="stat-icon">📊</div><div><span class="stat-label">Total Stok</span><b>${money(stok)}</b><small>total semua produk</small></div></div>
+  <div class="card stat stat-orange"><div class="stat-icon">📥</div><div><span class="stat-label">Stok Masuk Hari Ini</span><b>${money(masukHari)}</b><small>item masuk + produksi</small></div></div>
+  <div class="card stat stat-red"><div class="stat-icon">📤</div><div><span class="stat-label">Stok Keluar Hari Ini</span><b>${money(keluarHari)}</b><small>item keluar</small></div></div>
+ </div>
+ <div class="dashboard-grid modern-dashboard-grid">
+  <div class="card chart-card"><div class="section-title"><div><h3>📊 Pergerakan Stok (7 Hari Terakhir)</h3><p>Stok masuk/produksi dibandingkan stok keluar.</p></div></div><div class="chart-wrap"><canvas id="movementChart"></canvas></div></div>
+  <div class="card chart-card category-card"><div class="section-title"><div><h3>◔ Kategori Produk</h3><p>${money(total)} produk terdaftar</p></div></div><div class="category-layout"><div class="category-chart-wrap"><canvas id="categoryChart"></canvas></div><div class="category-list">${catRows.slice(0,7).map(([name,n])=>`<div class="category-row"><span>${esc(name)}</span><b>${money(n)}</b></div>`).join('')||'<div class="small">Belum ada kategori.</div>'}</div></div></div>
+ </div>
+ <div class="card recent-card"><div class="section-title"><div><h3>🕘 Aktivitas Terbaru</h3><p>Transaksi stok terakhir.</p></div><button class="btn" onclick="nav('transactions')">Lihat Semua</button></div>${transactionTable(recent)}</div>`;
+ if(window.Chart){
+  const m=document.getElementById('movementChart');if(m)new Chart(m,{type:'line',data:{labels:dayLabels,datasets:[{label:'Stok Masuk / Produksi',data:in7,tension:.35,fill:true},{label:'Stok Keluar',data:out7,tension:.35,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+  const c=document.getElementById('categoryChart');if(c)new Chart(c,{type:'doughnut',data:{labels:catRows.map(x=>x[0]),datasets:[{data:catRows.map(x=>x[1])}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false}}}});
  }
 }
 function transactionTable(rows){return `<div class="table-wrap"><table class="table"><thead><tr><th>Tanggal</th><th>Produk</th><th>Jenis</th><th>Qty</th><th>Sebelum</th><th>Sesudah</th><th>User</th></tr></thead><tbody>${rows.map(t=>`<tr><td>${dt(t.createdAt)}</td><td>${esc(t.namaProduk)}</td><td><span class="badge">${t.type==="in"?"MASUK":t.type==="out"?"KELUAR":t.type==="production"?"PRODUKSI":"ADJUSTMENT"}</span></td><td>${money(t.qty)}</td><td>${money(t.stokSebelum)}</td><td>${money(t.stokSesudah)}</td><td>${esc(t.userName)}</td></tr>`).join("")||"<tr><td colspan=7>Belum ada transaksi</td></tr>"}</tbody></table></div>`}
