@@ -1,18 +1,27 @@
-# LBS Inventory Frozen — Final v10
+# LBS Inventory FINAL v13 — PIN Operator Aman
 
-Versi final aplikasi Inventory & Stok Opname PT Lampung Bay Seafood.
+Versi ini mempertahankan dashboard modern dan seluruh modul versi sebelumnya.
 
-## Perubahan final
-- Dashboard modern mengikuti desain referensi: KPI, grafik pergerakan 7 hari, donut kategori, aktivitas terbaru, status sinkronisasi.
-- Tidak ada kartu Akses Cepat di Dashboard.
-- Menu sidebar: Dashboard, Produksi, Stok Masuk/Keluar, Stok Opname, Laporan, Produk, Pengguna (Admin).
-- Login Admin: email + password.
-- Login Operator: PIN 4 digit melalui akun Firebase Operator yang sudah ada.
-- Fitur Produksi, barcode, Stok Opname, laporan Excel/PDF, CRUD produk dan pengguna tetap dipertahankan.
-- Firebase project tetap `lbs-peminjaman`; tidak menghapus collection/data lama.
+## Login
+- Admin: email + password Firebase.
+- Operator: cukup masukkan PIN **0112**.
+- PIN tidak disimpan di Firestore dan tidak ditulis di `app.js`.
+- Backend Cloud Function memverifikasi PIN dan menerbitkan Firebase Custom Token untuk UID Operator `ZNakIBGkqrM49a4DeHCAZ8Rma4S2`.
 
-## Operator PIN
-PIN yang disepakati: `0112`. Karena Firebase Authentication memerlukan kredensial, aplikasi menggunakan PIN tersebut sebagai password akun Operator `operator@lampungbayseafood.com` di belakang layar. PIN tidak disimpan di Firestore.
+## Deploy sekali untuk PIN Operator
+Diperlukan Firebase CLI dan project `lbs-peminjaman`.
 
-## Deploy
-Upload `index.html`, `app.js`, `style.css`, `logo-lbs.png`, dan `README.md` ke root repository GitHub Pages yang sama.
+1. Instal Firebase CLI jika belum ada.
+2. Dari folder hasil ZIP ini jalankan `firebase login`.
+3. Jalankan `firebase use lbs-peminjaman`.
+4. Set secret PIN:
+   `firebase functions:secrets:set OPERATOR_PIN`
+   lalu masukkan `0112` saat diminta.
+5. Deploy function:
+   `firebase deploy --only functions:operatorPinLogin`
+6. Upload `index.html`, `app.js`, `style.css`, dan `logo-lbs.png` ke GitHub Pages seperti biasa.
+
+> Cloud Functions umumnya memerlukan billing/Blaze plan pada Firebase. Tidak perlu membuat project baru dan tidak perlu menghapus database.
+
+## Catatan keamanan
+PIN hanya berada di Secret Manager melalui Cloud Functions. Client browser tidak menerima nilai PIN atau password internal Firebase. Firestore Rules tetap memakai UID Operator yang sudah ada.
