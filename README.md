@@ -1,5 +1,2 @@
-# LBS Inventory Frozen
-
-Versi dashboard chart untuk PT Lampung Bay Seafood.
-
-Perubahan utama: dashboard sekarang menampilkan grafik batang **Grafik Stok Semua Produk** berdasarkan stok terkini dari Firestore.
+# LBS Inventory v7
+Update utama: menu Produksi dengan scan barcode atau pilih produk manual, jumlah hasil produksi, tanggal, shift, keterangan, update stok atomik, dan riwayat transaksi bertipe PRODUKSI. Tetap menggunakan Firebase project dan koleksi yang sama.
