@@ -3,17 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PT LAMPUNG BAY SEAFOOD - Inventory & Opname Realtime</title>
+  <title>PT LAMPUNG BAY SEAFOOD - Sistem Inventory Cold Storage</title>
   
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   
-  <!-- SheetJS (xlsx) & jsPDF for Export -->
+  <!-- SheetJS & jsPDF -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-  
   <!-- JsBarcode & Html5-QRCode -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -23,115 +22,151 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <style>
-    body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; }
     .navbar-brand { font-weight: 700; letter-spacing: 0.5px; }
-    .card-metric { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-    .badge-code { font-family: monospace; font-size: 0.9em; background: #e2e8f0; color: #1e293b; padding: 4px 8px; border-radius: 4px; }
-    .table-sm th, .table-sm td { font-size: 0.86rem; vertical-align: middle; }
-    .nav-pills .nav-link.active { background-color: #0d6efd; box-shadow: 0 4px 8px rgba(13,110,253,0.3); }
-    .table-subtotal { background-color: #f8fafc; font-weight: bold; }
-    .diff-plus { color: #198754; font-weight: bold; }
-    .diff-minus { color: #dc3545; font-weight: bold; }
+    .card-metric { border-radius: 10px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .badge-code { font-family: monospace; font-size: 0.88rem; background: #e2e8f0; color: #0f172a; padding: 4px 8px; border-radius: 4px; }
+    .nav-tabs .nav-link { font-weight: 600; color: #475569; padding: 12px 18px; border: none; border-bottom: 3px solid transparent; }
+    .nav-tabs .nav-link.active { color: #0284c7; background: transparent; border-bottom: 3px solid #0284c7; }
+    .role-badge { cursor: pointer; transition: all 0.2s; }
+    .role-badge:hover { transform: scale(1.05); }
+    .admin-only { display: block; }
+    body.is-operator .admin-only { display: none !important; }
+    body.is-operator .admin-disabled { pointer-events: none; background-color: #f1f5f9; }
+    .scanner-box { border: 2px dashed #0284c7; background-color: #f0f9ff; padding: 16px; border-radius: 10px; }
     #reader { width: 100%; max-width: 420px; margin: 0 auto; border-radius: 8px; overflow: hidden; }
-    .scanner-box { border: 2px dashed #0d6efd; background-color: #eff6ff; padding: 15px; border-radius: 10px; }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-    .status-online { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
+    .table-subtotal { background-color: #f1f5f9; font-weight: bold; }
+    .diff-plus { color: #16a34a; font-weight: bold; }
+    .diff-minus { color: #dc2626; font-weight: bold; }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .status-online { background-color: #22c55e; box-shadow: 0 0 6px #22c55e; }
     .status-offline { background-color: #eab308; }
   </style>
 </head>
-<body>
+<body class="is-admin">
 
-<!-- Navbar -->
-<nav class="navbar navbar-dark bg-dark px-3 shadow-sm border-bottom border-primary border-3">
+<!-- Top Header Navbar -->
+<nav class="navbar navbar-dark bg-dark px-3 py-2 shadow-sm border-bottom border-primary border-3">
   <div class="container-fluid">
     <span class="navbar-brand mb-0 h1 d-flex align-items-center">
       <i class="bi bi-water me-2 text-info fs-4"></i>
       PT LAMPUNG BAY SEAFOOD
     </span>
     
-    <div class="d-flex align-items-center gap-2">
-      <span id="firebaseStatusBadge" class="badge bg-secondary d-flex align-items-center py-2 px-3">
+    <div class="d-flex align-items-center gap-3">
+      <!-- Status Database -->
+      <span class="badge bg-secondary d-flex align-items-center py-2 px-3" id="dbStatusBadge">
         <span class="status-dot status-offline" id="statusDot"></span>
-        <span id="statusText">Memeriksa Database...</span>
+        <span id="statusText">Mode Lokal (Siap)</span>
       </span>
+
+      <!-- Role Switcher Panel: Admin vs Operator -->
+      <div class="btn-group shadow-sm" role="group">
+        <button type="button" class="btn btn-sm btn-primary active" id="btnRoleAdmin" onclick="setRole('admin')">
+          <i class="bi bi-shield-lock-fill me-1"></i> Admin
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-light" id="btnRoleOperator" onclick="setRole('operator')">
+          <i class="bi bi-person-badge-fill me-1"></i> Operator
+        </button>
+      </div>
     </div>
   </div>
 </nav>
 
-<div class="container-fluid py-4 px-md-4">
+<!-- Main Container -->
+<div class="container-fluid py-3 px-md-4">
 
-  <!-- Control Header: Sesi Tanggal -->
-  <div class="card shadow-sm border-0 mb-4 bg-white">
-    <div class="card-body py-3">
-      <div class="row align-items-center g-3">
+  <!-- Role Notice Banner -->
+  <div class="alert alert-info py-2 px-3 d-flex justify-content-between align-items-center mb-3 shadow-sm" id="roleBanner">
+    <div>
+      <span class="badge bg-primary me-2" id="currentRoleText">MODE: ADMIN</span>
+      <small id="roleDescText">Akses penuh: Edit master stok, ubah kode produksi, tambah produk baru, buat sesi opname, dan unduh laporan.</small>
+    </div>
+    <button class="btn btn-sm btn-outline-dark" onclick="toggleRoleQuick()"><i class="bi bi-arrow-repeat me-1"></i> Ganti Peran</button>
+  </div>
+
+  <!-- Session & Date Selector Bar -->
+  <div class="card shadow-sm border-0 mb-3 bg-white">
+    <div class="card-body py-2 px-3">
+      <div class="row align-items-center g-2">
         <div class="col-md-5">
-          <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-calendar-event me-1"></i> SESI OPNAME / BUKA DATA LAMA:</label>
-          <div class="input-group">
+          <label class="small fw-bold text-muted mb-0"><i class="bi bi-calendar-check me-1"></i> Sesi Tanggal Opname (Buka Data Lama / Hari Ini):</label>
+          <div class="input-group input-group-sm mt-1">
             <select id="selectSession" class="form-select fw-bold text-primary" onchange="switchSession(this.value)">
             </select>
-            <button class="btn btn-outline-primary" type="button" onclick="promptNewSession()"><i class="bi bi-plus-circle me-1"></i> Buat Opname Baru</button>
+            <button class="btn btn-outline-primary admin-only" type="button" onclick="promptNewSession()"><i class="bi bi-plus-circle me-1"></i> Buat Sesi Baru</button>
           </div>
         </div>
 
         <div class="col-md-4">
-          <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-file-text me-1"></i> NOMOR BERITA ACARA:</label>
-          <input type="text" id="docNomor" class="form-control form-control-sm" value="008/KEU/OPNAME/LBS/AGUST/2026" onchange="updateDocMeta()">
+          <label class="small fw-bold text-muted mb-0"><i class="bi bi-card-text me-1"></i> Nomor Berita Acara:</label>
+          <input type="text" id="docNomor" class="form-control form-control-sm mt-1" value="008/KEU/OPNAME/LBS/AGUST/2026" onchange="updateDocMeta()">
         </div>
 
         <div class="col-md-3 text-md-end pt-md-3">
-          <button class="btn btn-success btn-sm me-1 shadow-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Download Excel</button>
-          <button class="btn btn-danger btn-sm shadow-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Download PDF</button>
+          <button class="btn btn-success btn-sm me-1 shadow-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Excel</button>
+          <button class="btn btn-danger btn-sm shadow-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> PDF</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Nav Tabs -->
-  <ul class="nav nav-pills mb-4" id="mainTab" role="tablist">
+  <!-- Persistent Main Navigation Tabs (Selalu Muncul) -->
+  <ul class="nav nav-tabs mb-3 bg-white rounded-top shadow-sm px-2 pt-1" id="mainTab" role="tablist">
     <li class="nav-item">
-      <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#opnameTab"><i class="bi bi-upc-scan me-1 text-warning"></i> Scan Barcode & Opname</button>
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabOpname" type="button">
+        <i class="bi bi-upc-scan text-warning me-1"></i> Scan Barcode & Opname
+      </button>
     </li>
     <li class="nav-item">
-      <button class="nav-link" data-bs-toggle="pill" data-bs-target="#dashboard"><i class="bi bi-speedometer2 me-1"></i> Dashboard Sesi</button>
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabDashboard" type="button">
+        <i class="bi bi-speedometer2 text-primary me-1"></i> Dashboard Sesi
+      </button>
     </li>
     <li class="nav-item">
-      <button class="nav-link" data-bs-toggle="pill" data-bs-target="#inventoryTab"><i class="bi bi-boxes me-1"></i> Master Stok & Barcode</button>
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabMaster" type="button">
+        <i class="bi bi-boxes text-success me-1"></i> Master Stok & Barcode
+      </button>
     </li>
     <li class="nav-item">
-      <button class="nav-link" data-bs-toggle="pill" data-bs-target="#laporanTab"><i class="bi bi-file-earmark-spreadsheet me-1"></i> Preview Berita Acara</button>
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLaporan" type="button">
+        <i class="bi bi-file-earmark-spreadsheet text-info me-1"></i> Berita Acara & Unduh
+      </button>
     </li>
   </ul>
 
-  <div class="tab-content">
-    
-    <!-- TAB 1: SCAN BARCODE & OPNAME -->
-    <div class="tab-pane fade show active" id="opnameTab">
-      <div class="row g-4">
+  <!-- Tab Contents -->
+  <div class="tab-content" id="mainTabContent">
+
+    <!-- TAB 1: SCAN BARCODE & OPNAME (OPERATOR & ADMIN) -->
+    <div class="tab-pane fade show active" id="tabOpname">
+      <div class="row g-3">
+        <!-- Kolom Kiri: Scanner -->
         <div class="col-lg-5">
-          <div class="card shadow-sm border-0">
+          <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
               <span><i class="bi bi-upc-scan me-2"></i>Area Scan Barcode</span>
               <span class="badge bg-light text-primary"><i class="bi bi-broadcast"></i> Scanner Ready</span>
             </div>
             <div class="card-body">
-              <ul class="nav nav-tabs mb-3" role="tablist">
+              <ul class="nav nav-pills nav-fill mb-3" role="tablist">
                 <li class="nav-item">
-                  <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#gunScannerTab">
+                  <button class="nav-link active py-2" data-bs-toggle="pill" data-bs-target="#subGunScan" type="button">
                     <i class="bi bi-upc"></i> Scanner Tembak / Input
                   </button>
                 </li>
                 <li class="nav-item">
-                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#cameraScannerTab" onclick="initCamera()">
+                  <button class="nav-link py-2" data-bs-toggle="pill" data-bs-target="#subCamScan" type="button" onclick="initCamera()">
                     <i class="bi bi-camera"></i> Kamera HP / Laptop
                   </button>
                 </li>
               </ul>
 
               <div class="tab-content">
-                <div class="tab-pane fade show active" id="gunScannerTab">
+                <div class="tab-pane fade show active" id="subGunScan">
                   <div class="scanner-box mb-3">
-                    <label class="form-label fw-bold text-primary mb-1">Tembak Scanner / Input Barcode:</label>
-                    <p class="small text-muted mb-2">Scanner USB/Bluetooth otomatis mendeteksi dari mana saja.</p>
+                    <label class="form-label fw-bold text-primary mb-1">Tembak Barcode Kemasan:</label>
+                    <p class="small text-muted mb-2">Arahkan scanner tembak USB/Bluetooth atau ketik kode barcode di sini:</p>
                     <div class="input-group">
                       <span class="input-group-text"><i class="bi bi-upc fs-5"></i></span>
                       <input type="text" id="barcodeScannerInput" class="form-control form-control-lg fw-bold" placeholder="Scan barcode..." autofocus>
@@ -140,10 +175,10 @@
                   </div>
                 </div>
 
-                <div class="tab-pane fade" id="cameraScannerTab">
+                <div class="tab-pane fade" id="subCamScan">
                   <div class="text-center mb-3">
                     <div id="reader"></div>
-                    <small class="text-muted d-block mt-2">Arahkan kamera ke barcode box/karton</small>
+                    <small class="text-muted d-block mt-2">Arahkan kamera HP ke label barcode box/bag</small>
                     <div class="mt-2">
                       <button class="btn btn-sm btn-outline-danger" type="button" onclick="stopCamera()"><i class="bi bi-camera-video-off"></i> Matikan</button>
                       <button class="btn btn-sm btn-outline-primary" type="button" onclick="initCamera()"><i class="bi bi-arrow-clockwise"></i> Reset</button>
@@ -155,28 +190,30 @@
               <div id="scanStatusAlert" class="alert alert-info d-none mb-3"></div>
 
               <div class="p-3 bg-light rounded border">
-                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Shortcut Cepat Tes:</h6>
+                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Shortcut Tes Barcode:</h6>
                 <div class="d-flex flex-wrap gap-1">
                   <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('SLP-01')">SLP-01</button>
                   <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('GRP-04')">GRP-04</button>
                   <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('OCT-LEG')">OCT-LEG</button>
                   <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('OCT-TM')">OCT-TM</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('CRB-01')">CRB-01</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
+        <!-- Kolom Kanan: Input Form Opname -->
         <div class="col-lg-7">
-          <div class="card shadow-sm border-0">
+          <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-success text-white fw-bold">
-              <i class="bi bi-pencil-square me-2"></i>Input Hasil Opname Realtime
+              <i class="bi bi-pencil-square me-2"></i>Form Input Hitungan Fisik Cold Storage
             </div>
             <div class="card-body">
               <form id="formOpnameUpdate">
                 <input type="hidden" id="opnameItemIndex">
                 <div class="mb-3">
-                  <label class="form-label fw-bold">Nama Barang Terpilih</label>
+                  <label class="form-label fw-bold">Barang Terpilih</label>
                   <input type="text" id="opnameNamaDisplay" class="form-control form-control-lg bg-light fw-bold text-primary" readonly placeholder="Scan barcode terlebih dahulu...">
                 </div>
 
@@ -193,7 +230,7 @@
 
                 <div class="row p-3 bg-light rounded border mx-0 mb-3">
                   <div class="col-md-6 border-end">
-                    <h6 class="text-primary fw-bold mb-2"><i class="bi bi-hdd"></i> Stok Sistem</h6>
+                    <h6 class="text-primary fw-bold mb-2"><i class="bi bi-database"></i> Stok Sistem</h6>
                     <div class="mb-2">
                       <label class="small text-muted">Stok Sistem (Qty)</label>
                       <input type="number" id="opnameSysQty" class="form-control" readonly>
@@ -205,13 +242,13 @@
                   </div>
 
                   <div class="col-md-6">
-                    <h6 class="text-success fw-bold mb-2"><i class="bi bi-check2-circle"></i> Hasil Fisik Aktual</h6>
+                    <h6 class="text-success fw-bold mb-2"><i class="bi bi-check2-circle"></i> Hitungan Fisik Aktual</h6>
                     <div class="mb-2">
-                      <label class="small text-muted fw-bold">Fisik (Qty/Box/Bag)</label>
+                      <label class="small text-muted fw-bold">Hitungan Fisik (Qty/Box/Bag)</label>
                       <input type="number" id="opnameRealQty" class="form-control border-success fw-bold text-success" placeholder="Hitungan aktual" required>
                     </div>
                     <div>
-                      <label class="small text-muted fw-bold">Fisik Berat (Lbs)</label>
+                      <label class="small text-muted fw-bold">Hitungan Berat Fisik (Lbs)</label>
                       <input type="number" step="any" id="opnameRealLbs" class="form-control border-success fw-bold text-success" placeholder="Berat aktual" required>
                     </div>
                   </div>
@@ -219,7 +256,7 @@
 
                 <div class="d-flex justify-content-end gap-2">
                   <button type="button" class="btn btn-secondary" onclick="resetOpnameForm()">Reset</button>
-                  <button type="submit" class="btn btn-success px-4"><i class="bi bi-cloud-arrow-up me-1"></i> Simpan ke Database</button>
+                  <button type="submit" class="btn btn-success px-4"><i class="bi bi-cloud-arrow-up me-1"></i> Simpan Hasil Opname</button>
                 </div>
               </form>
             </div>
@@ -229,11 +266,11 @@
     </div>
 
     <!-- TAB 2: DASHBOARD -->
-    <div class="tab-pane fade" id="dashboard">
-      <div class="row g-3 mb-4">
+    <div class="tab-pane fade" id="tabDashboard">
+      <div class="row g-3 mb-3">
         <div class="col-md-3">
           <div class="card card-metric bg-white p-3 border-start border-primary border-4">
-            <h6 class="text-muted small mb-1">TOTAL VARIAN / SIZE</h6>
+            <h6 class="text-muted small mb-1">TOTAL PRODUK / SIZE</h6>
             <h3 id="dashTotalItem" class="fw-bold mb-0 text-primary">0</h3>
           </div>
         </div>
@@ -257,9 +294,9 @@
         </div>
       </div>
 
-      <div class="card shadow-sm border-0 mb-4">
+      <div class="card shadow-sm border-0 mb-3">
         <div class="card-header bg-white py-3 fw-bold d-flex justify-content-between align-items-center">
-          <span><i class="bi bi-snow2 text-primary me-2"></i>Status Inventory Kategori pada Sesi Terpilih</span>
+          <span><i class="bi bi-snow2 text-primary me-2"></i>Status Inventory Kategori</span>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
@@ -282,15 +319,15 @@
     </div>
 
     <!-- TAB 3: MASTER STOK & BARCODE -->
-    <div class="tab-pane fade" id="inventoryTab">
-      <div class="card shadow-sm border-0 mb-4">
+    <div class="tab-pane fade" id="tabMaster">
+      <div class="card shadow-sm border-0 mb-3">
         <div class="card-body">
           <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
-              <h5 class="card-title fw-bold mb-0">Daftar Item & Barcode Sesi Ini</h5>
-              <small class="text-muted">Perubahan otomatis tersinkronisasi ke Firebase secara realtime</small>
+              <h5 class="card-title fw-bold mb-0">Data Stok & Barcode Master</h5>
+              <small class="text-muted" id="masterDesc">Mode Admin: Anda dapat mengedit stok, kode produksi, dan menambah item.</small>
             </div>
-            <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#modalTambahProduk">
+            <button class="btn btn-primary btn-sm admin-only" type="button" data-bs-toggle="modal" data-bs-target="#modalTambahProduk">
               <i class="bi bi-plus-circle me-1"></i> Tambah Produk / Size Baru
             </button>
           </div>
@@ -307,7 +344,7 @@
                   <th class="text-end" style="width: 110px;">Stok Qty</th>
                   <th class="text-end" style="width: 120px;">Berat (Lbs)</th>
                   <th>Keterangan</th>
-                  <th class="text-center" style="width: 110px;">Aksi / Label</th>
+                  <th class="text-center" style="width: 100px;">Label / Aksi</th>
                 </tr>
               </thead>
               <tbody id="inventoryTableBody"></tbody>
@@ -317,8 +354,8 @@
       </div>
     </div>
 
-    <!-- TAB 4: PREVIEW BERITA ACARA -->
-    <div class="tab-pane fade" id="laporanTab">
+    <!-- TAB 4: PREVIEW BERITA ACARA & UNDUH -->
+    <div class="tab-pane fade" id="tabLaporan">
       <div class="card shadow-sm border-0">
         <div class="card-header bg-white py-3">
           <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -327,8 +364,8 @@
               <div class="small text-muted">PT. Lampung Bay Seafood — Jl. Raya Tanjung Bintang No. 101 Desa Serdang, Kec. Tanjung Bintang</div>
             </div>
             <div class="d-flex gap-2">
-              <button class="btn btn-success btn-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Unduh Excel</button>
-              <button class="btn btn-danger btn-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Unduh PDF</button>
+              <button class="btn btn-success btn-sm shadow-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Download Excel (.xlsx)</button>
+              <button class="btn btn-danger btn-sm shadow-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Download PDF (.pdf)</button>
             </div>
           </div>
         </div>
@@ -361,7 +398,7 @@
   </div>
 </div>
 
-<!-- MODAL LIHAT & CETAK BARCODE LABEL -->
+<!-- MODAL CETAK LABEL BARCODE -->
 <div class="modal fade" id="modalBarcodeLabel" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content text-center">
@@ -386,7 +423,7 @@
   </div>
 </div>
 
-<!-- MODAL TAMBAH PRODUK BARU -->
+<!-- MODAL TAMBAH PRODUK (ADMIN ONLY) -->
 <div class="modal fade" id="modalTambahProduk" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -470,17 +507,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// Konfigurasi Firebase Realtime Database Proyek Anda
-const firebaseConfig = {
-  apiKey: "AIzaSyAqta6QshdlBm94KTYZYO_8nJu_vxUsmLA",
-  authDomain: "lbs-inventory-85220.firebaseapp.com",
-  databaseURL: "https://lbs-inventory-85220-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "lbs-inventory-85220",
-  storageBucket: "lbs-inventory-85220.firebasestorage.app",
-  messagingSenderId: "870336592213",
-  appId: "1:870336592213:web:4d520c7db3d14a832097dc"
-};
-
+// Data Master Standar PT Lampung Bay Seafood
 const defaultItemsTemplate = [
   { barcode: "SLP-01", kategori: "FORZEN SLIPER MEAT", size: "Size U-2 Oz", kodeProduksi: "PRD-SLP-01", unit: "Bag", sysQty: 1638, sysLbs: 8190, opQty: 1638, opLbs: 8190, ket: "" },
   { barcode: "GRP-01", kategori: "FROZEN FARMER GROUPER SKIN LESS", size: "4-6 oz", kodeProduksi: "PRD-GRP-01", unit: "Mc", sysQty: 0, sysLbs: 0, opQty: 0, opLbs: 0, ket: "" },
@@ -510,14 +537,54 @@ const defaultItemsTemplate = [
   { barcode: "CRB-01", kategori: "FROZEN CRABMEAT- CCF", size: "Standard", kodeProduksi: "PRD-CRB-01", unit: "Bag", sysQty: 290, sysLbs: 290, opQty: 290, opLbs: 290, ket: "" }
 ];
 
+// State & Role System
+let currentRole = localStorage.getItem('LBS_USER_ROLE') || 'admin';
 let firebaseDb = null;
 let currentSessionKey = "2026-08-31";
 let currentDocNomor = "008/KEU/OPNAME/LBS/AGUST/2026";
 let allSessions = {};
 let currentItems = [];
 
-// Muat fallback lokal terlebih dahulu agar UI dan Tombol Unduh langsung aktif seketika
-function loadLocalFallback() {
+function setRole(role) {
+  currentRole = role;
+  localStorage.setItem('LBS_USER_ROLE', role);
+  applyRoleUI();
+}
+
+function toggleRoleQuick() {
+  setRole(currentRole === 'admin' ? 'operator' : 'admin');
+}
+
+function applyRoleUI() {
+  const isOperator = currentRole === 'operator';
+  document.body.className = isOperator ? 'is-operator' : 'is-admin';
+  
+  const btnAdmin = document.getElementById('btnRoleAdmin');
+  const btnOperator = document.getElementById('btnRoleOperator');
+  const roleBadge = document.getElementById('currentRoleText');
+  const roleDesc = document.getElementById('roleDescText');
+  const masterDesc = document.getElementById('masterDesc');
+
+  if (isOperator) {
+    btnOperator.className = 'btn btn-sm btn-warning fw-bold active';
+    btnAdmin.className = 'btn btn-sm btn-outline-light';
+    roleBadge.className = 'badge bg-warning text-dark me-2';
+    roleBadge.innerText = 'MODE: OPERATOR (COLD STORAGE)';
+    roleDesc.innerText = 'Akses terbatas: Scan barcode, hitung opname fisik, lihat daftar barcode & preview berita acara.';
+    if (masterDesc) masterDesc.innerText = 'Mode Operator: Hanya dapat melihat data dan mencetak label barcode.';
+  } else {
+    btnAdmin.className = 'btn btn-sm btn-primary fw-bold active';
+    btnOperator.className = 'btn btn-sm btn-outline-light';
+    roleBadge.className = 'badge bg-primary me-2';
+    roleBadge.innerText = 'MODE: ADMIN';
+    roleDesc.innerText = 'Akses penuh: Edit master stok, ubah kode produksi, tambah produk baru, buat sesi opname, dan unduh laporan.';
+    if (masterDesc) masterDesc.innerText = 'Mode Admin: Anda dapat mengedit stok, kode produksi, dan menambah item baru.';
+  }
+
+  renderInventoryTable();
+}
+
+function initLocalDataFirst() {
   allSessions = JSON.parse(localStorage.getItem('LBS_LOCAL_SESSIONS')) || {
     [currentSessionKey]: {
       docNomor: currentDocNomor,
@@ -529,9 +596,19 @@ function loadLocalFallback() {
   loadCurrentSessionData();
 }
 
-// Inisialisasi Firebase
 function initFirebase() {
-  loadLocalFallback();
+  initLocalDataFirst();
+  applyRoleUI();
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAqta6QshdlBm94KTYZYO_8nJu_vxUsmLA",
+    authDomain: "lbs-inventory-85220.firebaseapp.com",
+    databaseURL: "https://lbs-inventory-85220-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "lbs-inventory-85220",
+    storageBucket: "lbs-inventory-85220.firebasestorage.app",
+    messagingSenderId: "870336592213",
+    appId: "1:870336592213:web:4d520c7db3d14a832097dc"
+  };
 
   try {
     if (!firebase.apps.length) {
@@ -539,52 +616,32 @@ function initFirebase() {
     }
     firebaseDb = firebase.database();
     
-    // Deteksi koneksi aktif Firebase
-    const connectedRef = firebaseDb.ref(".info/connected");
-    connectedRef.on("value", (snap) => {
+    firebaseDb.ref(".info/connected").on("value", (snap) => {
       if (snap.val() === true) {
         document.getElementById('statusDot').className = 'status-dot status-online';
         document.getElementById('statusText').innerText = 'Firebase Online';
-        document.getElementById('firebaseStatusBadge').className = 'badge bg-success d-flex align-items-center py-2 px-3';
+        document.getElementById('dbStatusBadge').className = 'badge bg-success d-flex align-items-center py-2 px-3';
       } else {
         document.getElementById('statusDot').className = 'status-dot status-offline';
-        document.getElementById('statusText').innerText = 'Mode Lokal';
-        document.getElementById('firebaseStatusBadge').className = 'badge bg-warning text-dark d-flex align-items-center py-2 px-3';
+        document.getElementById('statusText').innerText = 'Mode Lokal (Offline)';
+        document.getElementById('dbStatusBadge').className = 'badge bg-secondary d-flex align-items-center py-2 px-3';
       }
     });
 
-    listenToFirebaseSessions();
+    firebaseDb.ref('inventory_sessions').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        firebaseDb.ref('inventory_sessions').set(allSessions);
+      } else {
+        allSessions = data;
+        localStorage.setItem('LBS_LOCAL_SESSIONS', JSON.stringify(allSessions));
+        updateSessionDropdown();
+        loadCurrentSessionData();
+      }
+    });
   } catch(e) {
-    console.error("Firebase init failed, running locally:", e);
+    console.warn("Firebase offline, berjalan normal via local:", e);
   }
-}
-
-function listenToFirebaseSessions() {
-  const sessionsRef = firebaseDb.ref('inventory_sessions');
-  sessionsRef.on('value', (snapshot) => {
-    const data = snapshot.val();
-    if (!data) {
-      seedInitialFirebaseData();
-    } else {
-      allSessions = data;
-      localStorage.setItem('LBS_LOCAL_SESSIONS', JSON.stringify(allSessions));
-      updateSessionDropdown();
-      loadCurrentSessionData();
-    }
-  }, (err) => {
-    console.warn("Firebase listener notice:", err);
-  });
-}
-
-function seedInitialFirebaseData() {
-  const initialData = {
-    [currentSessionKey]: {
-      docNomor: currentDocNomor,
-      tanggal: "Senin, 31 Agustus 2026",
-      items: defaultItemsTemplate
-    }
-  };
-  firebaseDb.ref('inventory_sessions').set(initialData);
 }
 
 function persistSession(sessionKey, sessionData) {
@@ -593,14 +650,13 @@ function persistSession(sessionKey, sessionData) {
   renderAll();
 
   if (firebaseDb) {
-    firebaseDb.ref('inventory_sessions/' + sessionKey).set(sessionData).catch(err => {
-      console.warn("Failed syncing to Firebase, saved locally:", err);
-    });
+    firebaseDb.ref('inventory_sessions/' + sessionKey).set(sessionData).catch(e => console.warn(e));
   }
 }
 
 function updateSessionDropdown() {
   const sel = document.getElementById('selectSession');
+  if (!sel) return;
   sel.innerHTML = '';
   const keys = Object.keys(allSessions).sort().reverse();
   keys.forEach(k => {
@@ -624,7 +680,8 @@ function loadCurrentSessionData() {
     const sess = allSessions[currentSessionKey];
     currentItems = sess.items || [];
     currentDocNomor = sess.docNomor || "008/KEU/OPNAME/LBS/AGUST/2026";
-    document.getElementById('docNomor').value = currentDocNomor;
+    const elDoc = document.getElementById('docNomor');
+    if (elDoc) elDoc.value = currentDocNomor;
   } else {
     currentItems = JSON.parse(JSON.stringify(defaultItemsTemplate));
   }
@@ -632,6 +689,10 @@ function loadCurrentSessionData() {
 }
 
 function promptNewSession() {
+  if (currentRole !== 'admin') {
+    alert("Hanya Admin yang dapat membuat sesi opname baru!");
+    return;
+  }
   const now = new Date();
   const defaultDateStr = now.toISOString().split('T')[0];
   const dateInput = prompt("Masukkan Tanggal Opname Baru (Format YYYY-MM-DD):", defaultDateStr);
@@ -657,6 +718,11 @@ function promptNewSession() {
 }
 
 function updateDocMeta() {
+  if (currentRole !== 'admin') {
+    alert("Hanya Admin yang dapat mengubah nomor berita acara!");
+    document.getElementById('docNomor').value = allSessions[currentSessionKey]?.docNomor || currentDocNomor;
+    return;
+  }
   const newDocNo = document.getElementById('docNomor').value;
   if (allSessions[currentSessionKey]) {
     allSessions[currentSessionKey].docNomor = newDocNo;
@@ -672,7 +738,10 @@ function renderAll() {
 
 function renderInventoryTable() {
   const tbody = document.getElementById('inventoryTableBody');
+  if (!tbody) return;
   tbody.innerHTML = '';
+  
+  const isOperator = currentRole === 'operator';
   
   currentItems.forEach((item, idx) => {
     tbody.innerHTML += `
@@ -685,21 +754,21 @@ function renderInventoryTable() {
         </td>
         <td class="text-center"><span class="badge bg-secondary">${item.unit}</span></td>
         <td>
-          <input type="text" class="form-control form-control-sm" value="${item.kodeProduksi || ''}" onchange="updateItemField(${idx}, 'kodeProduksi', this.value)">
+          <input type="text" class="form-control form-control-sm ${isOperator ? 'bg-light' : ''}" ${isOperator ? 'readonly' : ''} value="${item.kodeProduksi || ''}" onchange="updateItemField(${idx}, 'kodeProduksi', this.value)">
         </td>
         <td>
-          <input type="number" class="form-control form-control-sm text-end fw-bold" value="${item.sysQty}" onchange="updateItemField(${idx}, 'sysQty', Number(this.value))">
+          <input type="number" class="form-control form-control-sm text-end fw-bold ${isOperator ? 'bg-light' : ''}" ${isOperator ? 'readonly' : ''} value="${item.sysQty}" onchange="updateItemField(${idx}, 'sysQty', Number(this.value))">
         </td>
         <td>
-          <input type="number" step="any" class="form-control form-control-sm text-end fw-bold text-primary" value="${item.sysLbs}" onchange="updateItemField(${idx}, 'sysLbs', Number(this.value))">
+          <input type="number" step="any" class="form-control form-control-sm text-end fw-bold text-primary ${isOperator ? 'bg-light' : ''}" ${isOperator ? 'readonly' : ''} value="${item.sysLbs}" onchange="updateItemField(${idx}, 'sysLbs', Number(this.value))">
         </td>
         <td>
-          <input type="text" class="form-control form-control-sm" value="${item.ket || ''}" placeholder="Keterangan..." onchange="updateItemField(${idx}, 'ket', this.value)">
+          <input type="text" class="form-control form-control-sm ${isOperator ? 'bg-light' : ''}" ${isOperator ? 'readonly' : ''} value="${item.ket || ''}" placeholder="Keterangan..." onchange="updateItemField(${idx}, 'ket', this.value)">
         </td>
         <td class="text-center">
           <div class="btn-group btn-group-sm">
             <button class="btn btn-outline-dark" type="button" onclick="showBarcodeModal(${idx})" title="Cetak Barcode"><i class="bi bi-qr-code"></i></button>
-            <button class="btn btn-outline-danger" type="button" onclick="deleteItem(${idx})" title="Hapus"><i class="bi bi-trash"></i></button>
+            ${!isOperator ? `<button class="btn btn-outline-danger" type="button" onclick="deleteItem(${idx})" title="Hapus"><i class="bi bi-trash"></i></button>` : ''}
           </div>
         </td>
       </tr>
@@ -708,12 +777,17 @@ function renderInventoryTable() {
 }
 
 function updateItemField(idx, field, val) {
+  if (currentRole !== 'admin') return;
   currentItems[idx][field] = val;
   allSessions[currentSessionKey].items = currentItems;
   persistSession(currentSessionKey, allSessions[currentSessionKey]);
 }
 
 function deleteItem(idx) {
+  if (currentRole !== 'admin') {
+    alert("Hanya Admin yang dapat menghapus data barang!");
+    return;
+  }
   if (confirm(`Hapus item ${currentItems[idx].kategori} (${currentItems[idx].size})?`)) {
     currentItems.splice(idx, 1);
     allSessions[currentSessionKey].items = currentItems;
@@ -722,7 +796,10 @@ function deleteItem(idx) {
 }
 
 function renderDashboard() {
-  document.getElementById('dashTotalItem').innerText = currentItems.length;
+  const elTotal = document.getElementById('dashTotalItem');
+  if (!elTotal) return;
+  elTotal.innerText = currentItems.length;
+  
   const totalQty = currentItems.reduce((acc, i) => acc + (Number(i.sysQty) || 0), 0);
   const totalLbs = currentItems.reduce((acc, i) => acc + (Number(i.sysLbs) || 0), 0);
   
@@ -747,6 +824,7 @@ function renderDashboard() {
   });
 
   const catTbody = document.getElementById('categorySummaryBody');
+  if (!catTbody) return;
   catTbody.innerHTML = '';
   Object.keys(catMap).forEach(k => {
     const d = catMap[k];
@@ -770,6 +848,7 @@ function renderDashboard() {
 
 function renderLaporan() {
   const tbody = document.getElementById('previewLaporanBody');
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   let currentCat = '';
@@ -850,12 +929,14 @@ function renderLaporan() {
 
 // Scanner Logik
 const scanInput = document.getElementById('barcodeScannerInput');
-scanInput.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    processBarcodeSearch(this.value);
-  }
-});
+if (scanInput) {
+  scanInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      processBarcodeSearch(this.value);
+    }
+  });
+}
 
 let barcodeBuffer = '';
 let lastKeyTime = Date.now();
@@ -871,7 +952,7 @@ window.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') {
     if (barcodeBuffer.length > 2) {
       e.preventDefault();
-      const opnameBtn = document.querySelector('[data-bs-target="#opnameTab"]');
+      const opnameBtn = document.querySelector('[data-bs-target="#tabOpname"]');
       if (opnameBtn) bootstrap.Tab.getOrCreateInstance(opnameBtn).show();
       processBarcodeSearch(barcodeBuffer);
       barcodeBuffer = '';
@@ -909,7 +990,8 @@ function processBarcodeSearch(rawCode) {
     alertBox.className = "alert alert-danger";
     alertBox.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i> Barcode <b>"${cleanCode}"</b> tidak terdaftar di sesi ini!`;
   }
-  document.getElementById('barcodeScannerInput').value = '';
+  const elInput = document.getElementById('barcodeScannerInput');
+  if (elInput) elInput.value = '';
 }
 
 let html5QrCode = null;
@@ -921,7 +1003,7 @@ function initCamera() {
     { fps: 15, qrbox: { width: 280, height: 160 } },
     (decodedText) => processBarcodeSearch(decodedText)
   ).catch(err => {
-    document.getElementById('reader').innerHTML = '<div class="alert alert-warning small p-2">Kamera tidak aktif atau izin ditolak browser.</div>';
+    document.getElementById('reader').innerHTML = '<div class="alert alert-warning small p-2">Kamera tidak aktif atau izin browser belum diberikan.</div>';
   });
 }
 
@@ -931,6 +1013,7 @@ function stopCamera() {
   }
 }
 
+// Form Opname Save
 document.getElementById('formOpnameUpdate').addEventListener('submit', function(e) {
   e.preventDefault();
   const idx = document.getElementById('opnameItemIndex').value;
@@ -952,7 +1035,7 @@ document.getElementById('formOpnameUpdate').addEventListener('submit', function(
   allSessions[currentSessionKey].items = currentItems;
   persistSession(currentSessionKey, allSessions[currentSessionKey]);
 
-  alert(`Hasil opname berhasil disimpan!`);
+  alert(`Hasil opname berhasil disimpan & disinkronkan!`);
   resetOpnameForm();
 });
 
@@ -963,8 +1046,13 @@ function resetOpnameForm() {
   document.getElementById('scanStatusAlert').classList.add('d-none');
 }
 
+// Tambah Produk Baru (Admin Only)
 document.getElementById('formTambahProdukBaru').addEventListener('submit', function(e) {
   e.preventDefault();
+  if (currentRole !== 'admin') {
+    alert("Hanya Admin yang dapat menambah produk baru!");
+    return;
+  }
   const newItem = {
     barcode: document.getElementById('newBarcode').value.trim(),
     kategori: document.getElementById('newCategory').value.trim(),
@@ -979,7 +1067,7 @@ document.getElementById('formTambahProdukBaru').addEventListener('submit', funct
   };
 
   if (currentItems.some(i => i.barcode.toLowerCase() === newItem.barcode.toLowerCase())) {
-    alert('Barcode ini sudah ada di sesi ini! Gunakan barcode unik.');
+    alert('Barcode ini sudah ada di database!');
     return;
   }
 
@@ -1019,13 +1107,12 @@ function printBarcodeLabel() {
   location.reload();
 }
 
-// FUNGSI UNDUH EXCEL RESMI
+// Download Excel
 function exportToExcel() {
   try {
     const sess = allSessions[currentSessionKey] || {};
     const docNo = sess.docNomor || currentDocNomor;
     const docDate = sess.tanggal || currentSessionKey;
-
     const exportData = currentItems.length ? currentItems : defaultItemsTemplate;
 
     const aoa = [
@@ -1076,12 +1163,12 @@ function exportToExcel() {
   }
 }
 
-// FUNGSI UNDUH PDF RESMI
+// Download PDF
 function exportToPDF() {
   try {
     const jsPDFClass = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
     if (!jsPDFClass) {
-      alert("Pustaka PDF sedang dimuat, silakan coba 2 detik lagi.");
+      alert("Pustaka PDF sedang dimuat, silakan coba sesaat lagi.");
       return;
     }
 
@@ -1089,7 +1176,6 @@ function exportToPDF() {
     const sess = allSessions[currentSessionKey] || {};
     const docNo = sess.docNomor || currentDocNomor;
     const docDate = sess.tanggal || currentSessionKey;
-
     const exportData = currentItems.length ? currentItems : defaultItemsTemplate;
 
     doc.setFontSize(9);
