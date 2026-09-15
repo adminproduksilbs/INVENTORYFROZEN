@@ -31,11 +31,17 @@ async function renderDashboard(){
  $("content").innerHTML=`<div class="stats">
  <div class="card stat">Total Produk<b>${total}</b></div><div class="card stat">Produk Aktif<b>${aktif}</b></div>
  <div class="card stat">Total Stok<b>${money(stok)}</b></div><div class="card stat">Stok Opname<b>${opnames.length}</b></div></div>
+ <div class="card chart-card" style="margin-top:15px"><div class="dashboard-head"><div><h3>📊 Grafik Stok Semua Produk</h3><p class="small">Menampilkan stok terkini seluruh produk.</p></div></div><div class="chart-wrap"><canvas id="stockChart"></canvas></div></div>
  <div class="grid"><div class="card"><h3>📦 Master Produk</h3><p>Kelola kode, barcode, kategori, satuan, berat dan stok awal.</p><button class="btn primary" onclick="nav('products')">Buka Produk</button></div>
  <div class="card"><h3>📊 Inventory</h3><p>Lihat stok terkini dan lakukan stok masuk/keluar.</p><button class="btn primary" onclick="nav('inventory')">Buka Inventory</button></div>
  <div class="card"><h3>📝 Stok Opname</h3><p>Bandingkan stok sistem dengan stok fisik dan finalisasi penyesuaian.</p><button class="btn primary" onclick="nav('opname')">Buka Opname</button></div>
  <div class="card"><h3>📄 Laporan</h3><p>Export Excel dan PDF Berita Acara Stok Opname.</p><button class="btn primary" onclick="nav('reports')">Buka Laporan</button></div></div>
  <div class="card" style="margin-top:15px"><h3>Transaksi Terakhir</h3>${transactionTable(transactions.slice(0,8))}</div>`;
+ const canvas=document.getElementById('stockChart');
+ if(canvas && window.Chart){
+   const sorted=[...products].sort((a,b)=>Number(b.stok||0)-Number(a.stok||0));
+   new Chart(canvas,{type:'bar',data:{labels:sorted.map(p=>p.kodeProduk||p.namaProduk||'Produk'),datasets:[{label:'Stok',data:sorted.map(p=>Number(p.stok||0))}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>`Stok: ${Number(c.raw||0).toLocaleString('id-ID')}`}}},scales:{x:{ticks:{autoSkip:false,maxRotation:45,minRotation:0}},y:{beginAtZero:true,ticks:{precision:0}}}}});
+ }
 }
 function transactionTable(rows){return `<div class="table-wrap"><table class="table"><thead><tr><th>Tanggal</th><th>Produk</th><th>Jenis</th><th>Qty</th><th>Sebelum</th><th>Sesudah</th><th>User</th></tr></thead><tbody>${rows.map(t=>`<tr><td>${dt(t.createdAt)}</td><td>${esc(t.namaProduk)}</td><td><span class="badge">${t.type==="in"?"MASUK":t.type==="out"?"KELUAR":"ADJUSTMENT"}</span></td><td>${money(t.qty)}</td><td>${money(t.stokSebelum)}</td><td>${money(t.stokSesudah)}</td><td>${esc(t.userName)}</td></tr>`).join("")||"<tr><td colspan=7>Belum ada transaksi</td></tr>"}</tbody></table></div>`}
 
