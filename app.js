@@ -71,8 +71,75 @@ $("saveStock").onclick=async()=>{let qty=Number($('stockForm').querySelector('[n
 
 async function renderTransactions(){await loadTransactions();$("content").innerHTML=`<div class="card"><div class="toolbar"><div><h3>Riwayat Stok</h3></div><button class="btn blue" id="exportTrx">Export Excel</button></div>${transactionTable(transactions)}</div>`;$("exportTrx").onclick=()=>exportExcel(transactions.map(t=>({Tanggal:dt(t.createdAt),Kode:t.kodeProduk,Nama:t.namaProduk,Barcode:t.barcode,Jenis:t.type,Qty:t.qty,Sebelum:t.stokSebelum,Sesudah:t.stokSesudah,Keterangan:t.keterangan,User:t.userName})), "Riwayat_Stok")}
 async function renderOpname(){await loadProducts();await loadOpnames();$("content").innerHTML=`<div class="card"><div class="toolbar"><div><h3>Stok Opname</h3><p class="small">Buat opname, masukkan stok fisik, lalu finalisasi.</p></div><button class="btn primary" id="newOpname">+ Opname Baru</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Nomor</th><th>Tanggal</th><th>Lokasi</th><th>Status</th><th>User</th><th>Aksi</th></tr></thead><tbody>${opnames.map(o=>`<tr><td>${esc(o.nomor)}</td><td>${dt(o.tanggal||o.createdAt)}</td><td>${esc(o.lokasi)}</td><td>${esc(o.status)}</td><td>${esc(o.createdByName)}</td><td><button class="btn" onclick="openOpname('${o.id}')">Buka</button> ${o.status==="draft"?`<button class="btn blue" onclick="finalizeOpname('${o.id}')">Finalisasi</button>`:""}</td></tr>`).join("")||"<tr><td colspan=6>Belum ada opname</td></tr>"}</tbody></table></div></div>`;$("newOpname").onclick=newOpname}
-async function newOpname(){let nomor="BA-SO-"+new Date().toISOString().slice(0,10).replaceAll("-","")+"-"+String(opnames.length+1).padStart(3,"0");openModal(`<h2>Opname Baru</h2><form id="opForm"><div class="form-grid">${field("nomor","Nomor",nomor,"required")}${field("tanggal","Tanggal",new Date().toISOString().slice(0,10),"required","date")}${field("lokasi","Lokasi","Cold Storage")}</div><div class="actions"><button class="btn primary">Buat Opname</button></div></form>`);$("opForm").onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target);let ref=await addDoc(collection(db,"opnames"),{nomor:f.get("nomor"),tanggal:f.get("tanggal"),lokasi:f.get("lokasi"),status:"draft",createdBy:currentUser.uid,createdByName:currentProfile.nama||currentUser.email,createdAt:serverTimestamp()});for(const p of products){await setDoc(doc(db,"opnames",ref.id,"details",p.id),{productId:p.id,barcode:p.barcode||"",kodeProduk:p.kodeProduk||"",namaProduk:p.namaProduk||"",satuan:p.satuan||"",systemStock:Number(p.stok||0),physicalStock:Number(p.stok||0),difference:0,note:""})}closeModal();toast("Opname dibuat");renderOpname()}}
-window.openOpname=async id=>{let o=opnames.find(x=>x.id===id);let snap=await getDocs(collection(db,"opnames",id,"details"));let ds=snap.docs.map(x=>({id:x.id,...x.data()}));openModal(`<h2>Opname ${esc(o.nomor)}</h2><div class="notice">Tanggal: ${dt(o.tanggal)} · Lokasi: ${esc(o.lokasi)} · Status: <b>${esc(o.status)}</b></div><div class="table-wrap"><table class="table"><thead><tr><th>Kode</th><th>Nama</th><th>Sistem</th><th>Fisik</th><th>Selisih</th><th>Catatan</th></tr></thead><tbody>${ds.map(d=>`<tr><td>${esc(d.kodeProduk)}</td><td>${esc(d.namaProduk)}</td><td>${money(d.systemStock)}</td><td><input class="phys" data-id="${d.id}" type="number" step="0.001" value="${d.physicalStock}"></td><td id="dif-${d.id}" class="${d.difference<0?"negative":d.difference>0?"positive":""}">${money(d.difference)}</td><td><input class="note" data-id="${d.id}" value="${esc(d.note)}"></td></tr>`).join("")}</tbody></table></div>${o.status==="draft"?'<div class="actions"><button class="btn primary" id="saveOp">Simpan Fisik</button></div>':""}`);document.querySelectorAll(".phys").forEach(inp=>inp.oninput=()=>{let d=ds.find(x=>x.id===inp.dataset.id),dif=Number(inp.value)-Number(d.systemStock),el=$("dif-"+d.id);el.textContent=money(dif);el.className=dif<0?"negative":dif>0?"positive":""});if($("saveOp"))$("saveOp").onclick=async()=>{let batch=writeBatch(db);for(const d of ds){let phys=Number(document.querySelector(`.phys[data-id="${d.id}"]`).value),note=document.querySelector(`.note[data-id="${d.id}"]`).value.trim();batch.update(doc(db,"opnames",id,"details",d.id),{physicalStock:phys,difference:phys-Number(d.systemStock),note,updatedAt:serverTimestamp()})}await batch.commit();closeModal();toast("Stok fisik tersimpan");renderOpname()}}
+async function newOpname(){let nomor="BA-SO-"+new Date().toISOString().slice(0,10).replaceAll("-","")+"-"+String(opnames.length+1).padStart(3,"0");openModal(`<h2>Opname Baru</h2><form id="opForm"><div class="form-grid">${field("nomor","Nomor",nomor,"required")}${field("tanggal","Tanggal",new Date().toISOString().slice(0,10),"required","date")}${field("lokasi","Lokasi","Cold Storage")}</div><div class="actions"><button class="btn primary">Buat Opname</button></div></form>`);$("opForm").onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target);let ref=await addDoc(collection(db,"opnames"),{nomor:f.get("nomor"),tanggal:f.get("tanggal"),lokasi:f.get("lokasi"),status:"draft",createdBy:currentUser.uid,createdByName:currentProfile.nama||currentUser.email,createdAt:serverTimestamp()});for(const p of products){await setDoc(doc(db,"opnames",ref.id,"details",p.id),{productId:p.id,barcode:p.barcode||"",kodeProduk:p.kodeProduk||"",namaProduk:p.namaProduk||"",satuan:p.satuan||"",systemStock:Number(p.stok||0),physicalStock:0,difference:-Number(p.stok||0),note:""})}closeModal();toast("Opname dibuat");renderOpname()}}
+window.openOpname=async id=>{
+ let o=opnames.find(x=>x.id===id);
+ let snap=await getDocs(collection(db,"opnames",id,"details"));
+ let ds=snap.docs.map(x=>({id:x.id,...x.data()}));
+ let editable=o.status==="draft";
+ openModal(`<h2>Opname ${esc(o.nomor)}</h2>
+ <div class="notice">Tanggal: ${dt(o.tanggal)} · Lokasi: ${esc(o.lokasi)} · Status: <b>${esc(o.status)}</b></div>
+ ${editable?`<div class="scan-opname-box">
+   <div><h3>📷 Scan Barcode untuk Menghitung</h3><p class="small">Setiap barcode yang berhasil discan akan otomatis menambah <b>+1</b> ke stok fisik produk tersebut.</p></div>
+   <button class="btn primary" id="startOpScan">📷 Mulai Scan</button>
+   <div id="opReader" style="width:100%;display:none;margin-top:12px"></div>
+   <div id="opScanStatus" class="small">Siap melakukan scan.</div>
+ </div>`:""}
+ <div class="table-wrap"><table class="table"><thead><tr><th>Barcode</th><th>Kode</th><th>Nama</th><th>Sistem</th><th>Fisik</th><th>Selisih</th><th>Catatan</th></tr></thead>
+ <tbody>${ds.map(d=>`<tr>
+ <td>${esc(d.barcode)}</td><td>${esc(d.kodeProduk)}</td><td>${esc(d.namaProduk)}</td><td>${money(d.systemStock)}</td>
+ <td>${editable?`<input class="phys" data-id="${d.id}" type="number" min="0" step="0.001" value="${d.physicalStock}">`:`${money(d.physicalStock)}`}</td>
+ <td id="dif-${d.id}" class="${d.difference<0?"negative":d.difference>0?"positive":""}">${money(d.difference)}</td>
+ <td>${editable?`<input class="note" data-id="${d.id}" value="${esc(d.note)}">`:`${esc(d.note||"")}`}</td>
+ </tr>`).join("")}</tbody></table></div>
+ ${editable?'<div class="actions"><button class="btn primary" id="saveOp">💾 Simpan Hitungan</button></div>':""}`);
+
+ function updateDiff(d,phys){
+   let dif=Number(phys)-Number(d.systemStock),el=$("dif-"+d.id);
+   el.textContent=money(dif);el.className=dif<0?"negative":dif>0?"positive":"";
+ }
+ if(editable){
+   document.querySelectorAll(".phys").forEach(inp=>inp.oninput=()=>{
+     let d=ds.find(x=>x.id===inp.dataset.id); updateDiff(d,Number(inp.value));
+   });
+   $("saveOp").onclick=async()=>{
+     let batch=writeBatch(db);
+     for(const d of ds){
+       let inp=document.querySelector(`.phys[data-id="${d.id}"]`);
+       let note=document.querySelector(`.note[data-id="${d.id}"]`);
+       let phys=Number(inp.value||0);
+       batch.update(doc(db,"opnames",id,"details",d.id),{physicalStock:phys,difference:phys-Number(d.systemStock),note:note.value.trim(),updatedAt:serverTimestamp()});
+     }
+     await batch.commit(); closeModal(); toast("Hitungan opname tersimpan"); renderOpname();
+   };
+
+   $("startOpScan").onclick=async()=>{
+     const reader=$("opReader"), status=$("opScanStatus");
+     reader.style.display="block"; $("startOpScan").disabled=true;
+     let qr=new Html5Qrcode("opReader"), busy=false;
+     status.textContent="Kamera aktif. Arahkan barcode ke kamera.";
+     try{
+       await qr.start({facingMode:"environment"},{fps:10,qrbox:{width:260,height:160}},async code=>{
+         if(busy)return; busy=true;
+         let d=ds.find(x=>String(x.barcode||"").trim()===String(code).trim());
+         if(!d){
+           status.textContent="❌ Barcode "+code+" tidak ditemukan di daftar opname.";
+           busy=false; setTimeout(()=>{status.textContent="Arahkan barcode berikutnya ke kamera.";},1200); return;
+         }
+         let inp=document.querySelector(`.phys[data-id="${d.id}"]`);
+         let next=Number(inp.value||0)+1;
+         inp.value=next; updateDiff(d,next);
+         status.textContent=`✅ ${d.namaProduk} — hitungan: ${next}`;
+         inp.scrollIntoView({behavior:"smooth",block:"center"});
+         setTimeout(()=>{busy=false;},700);
+       });
+     }catch(e){
+       status.textContent="❌ Kamera tidak dapat dibuka. Pastikan izin kamera aktif dan situs menggunakan HTTPS.";
+       $("startOpScan").disabled=false;
+     }
+   };
+ }
+}
 window.finalizeOpname=async id=>{if(!confirm("Finalisasi akan mengubah stok sistem menjadi stok fisik. Lanjutkan?"))return;let o=opnames.find(x=>x.id===id),snap=await getDocs(collection(db,"opnames",id,"details")),ds=snap.docs.map(x=>({id:x.id,...x.data()}));let batch=writeBatch(db);for(const d of ds){if(Number(d.difference||0)!==0){let pref=doc(db,"products",d.productId),tref=doc(collection(db,"stock_transactions"));batch.update(pref,{stok:Number(d.physicalStock),updatedAt:serverTimestamp()});batch.set(tref,{productId:d.productId,barcode:d.barcode,kodeProduk:d.kodeProduk,namaProduk:d.namaProduk,type:"adjustment",qty:Math.abs(Number(d.difference)),selisih:Number(d.difference),stokSebelum:Number(d.systemStock),stokSesudah:Number(d.physicalStock),keterangan:"Penyesuaian Stok Opname "+o.nomor,userId:currentUser.uid,userName:currentProfile.nama||currentUser.email,createdAt:serverTimestamp()})}}batch.update(doc(db,"opnames",id),{status:"final",finalizedAt:serverTimestamp(),finalizedBy:currentUser.uid,finalizedByName:currentProfile.nama||currentUser.email});await batch.commit();toast("Opname berhasil difinalisasi");renderOpname()}
 
 async function renderReports(){await loadProducts();await loadTransactions();await loadOpnames();$("content").innerHTML=`<div class="grid"><div class="card"><h3>📊 Laporan Inventory</h3><p>Download stok terkini dalam Excel.</p><button class="btn blue" id="exInv">Excel Inventory</button></div><div class="card"><h3>🔄 Laporan Transaksi</h3><p>Download seluruh riwayat stok.</p><button class="btn blue" id="exTrx">Excel Transaksi</button></div><div class="card"><h3>📝 Berita Acara Opname</h3><p>Pilih opname final/draft lalu cetak PDF.</p><select id="opSelect" style="padding:10px;width:100%;margin:10px 0"><option value="">Pilih opname</option>${opnames.map(o=>`<option value="${o.id}">${esc(o.nomor)} - ${esc(o.lokasi)}</option>`).join("")}</select><button class="btn primary" id="pdfOp">Download PDF</button></div></div>`;$("exInv").onclick=()=>exportExcel(products.map(p=>({Barcode:p.barcode,Kode:p.kodeProduk,Nama:p.namaProduk,Kategori:p.kategori,Stok:p.stok,Satuan:p.satuan,"Berat/Satuan":p.beratPerSatuan,"Stok LBS":p.stokLbs,Lokasi:p.lokasi,Status:p.aktif===false?"Nonaktif":"Aktif"})),"Inventory");$("exTrx").onclick=()=>exportExcel(transactions.map(t=>({Tanggal:dt(t.createdAt),Kode:t.kodeProduk,Nama:t.namaProduk,Jenis:t.type,Qty:t.qty,Sebelum:t.stokSebelum,Sesudah:t.stokSesudah,Keterangan:t.keterangan,User:t.userName})),"Transaksi");$("pdfOp").onclick=()=>{let id=$("opSelect").value;if(id)makeOpnamePDF(id);else alert("Pilih opname dulu")}}
