@@ -10,16 +10,17 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   
   <!-- SheetJS & jsPDF -->
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  
   <!-- JsBarcode & Html5-QRCode -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
 
-  <!-- Firebase App & Realtime Database -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Firebase SDK Standar v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <style>
     body { background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; }
@@ -28,17 +29,14 @@
     .badge-code { font-family: monospace; font-size: 0.88rem; background: #e2e8f0; color: #0f172a; padding: 4px 8px; border-radius: 4px; }
     .nav-tabs .nav-link { font-weight: 600; color: #475569; padding: 12px 18px; border: none; border-bottom: 3px solid transparent; }
     .nav-tabs .nav-link.active { color: #0284c7; background: transparent; border-bottom: 3px solid #0284c7; }
-    .role-badge { cursor: pointer; transition: all 0.2s; }
-    .role-badge:hover { transform: scale(1.05); }
     .admin-only { display: block; }
     body.is-operator .admin-only { display: none !important; }
-    body.is-operator .admin-disabled { pointer-events: none; background-color: #f1f5f9; }
     .scanner-box { border: 2px dashed #0284c7; background-color: #f0f9ff; padding: 16px; border-radius: 10px; }
     #reader { width: 100%; max-width: 420px; margin: 0 auto; border-radius: 8px; overflow: hidden; }
     .table-subtotal { background-color: #f1f5f9; font-weight: bold; }
     .diff-plus { color: #16a34a; font-weight: bold; }
     .diff-minus { color: #dc2626; font-weight: bold; }
-    .status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
     .status-online { background-color: #22c55e; box-shadow: 0 0 6px #22c55e; }
     .status-offline { background-color: #eab308; }
   </style>
@@ -57,7 +55,7 @@
       <!-- Status Database -->
       <span class="badge bg-secondary d-flex align-items-center py-2 px-3" id="dbStatusBadge">
         <span class="status-dot status-offline" id="statusDot"></span>
-        <span id="statusText">Mode Lokal (Siap)</span>
+        <span id="statusText">Menghubungkan...</span>
       </span>
 
       <!-- Role Switcher Panel: Admin vs Operator -->
@@ -80,9 +78,9 @@
   <div class="alert alert-info py-2 px-3 d-flex justify-content-between align-items-center mb-3 shadow-sm" id="roleBanner">
     <div>
       <span class="badge bg-primary me-2" id="currentRoleText">MODE: ADMIN</span>
-      <small id="roleDescText">Akses penuh: Edit master stok, ubah kode produksi, tambah produk baru, buat sesi opname, dan unduh laporan.</small>
+      <small id="roleDescText">Akses penuh: Edit master stok, kode produksi, tambah produk baru, buat sesi opname, dan unduh laporan.</small>
     </div>
-    <button class="btn btn-sm btn-outline-dark" onclick="toggleRoleQuick()"><i class="bi bi-arrow-repeat me-1"></i> Ganti Peran</button>
+    <button class="btn btn-sm btn-outline-dark" type="button" onclick="toggleRoleQuick()"><i class="bi bi-arrow-repeat me-1"></i> Ganti Peran</button>
   </div>
 
   <!-- Session & Date Selector Bar -->
@@ -104,14 +102,14 @@
         </div>
 
         <div class="col-md-3 text-md-end pt-md-3">
-          <button class="btn btn-success btn-sm me-1 shadow-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Excel</button>
-          <button class="btn btn-danger btn-sm shadow-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> PDF</button>
+          <button class="btn btn-success btn-sm me-1 shadow-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Download Excel</button>
+          <button class="btn btn-danger btn-sm shadow-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Download PDF</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Persistent Main Navigation Tabs (Selalu Muncul) -->
+  <!-- Persistent Main Navigation Tabs -->
   <ul class="nav nav-tabs mb-3 bg-white rounded-top shadow-sm px-2 pt-1" id="mainTab" role="tablist">
     <li class="nav-item">
       <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabOpname" type="button">
@@ -138,10 +136,9 @@
   <!-- Tab Contents -->
   <div class="tab-content" id="mainTabContent">
 
-    <!-- TAB 1: SCAN BARCODE & OPNAME (OPERATOR & ADMIN) -->
+    <!-- TAB 1: SCAN BARCODE & OPNAME -->
     <div class="tab-pane fade show active" id="tabOpname">
       <div class="row g-3">
-        <!-- Kolom Kiri: Scanner -->
         <div class="col-lg-5">
           <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
@@ -203,7 +200,6 @@
           </div>
         </div>
 
-        <!-- Kolom Kanan: Input Form Opname -->
         <div class="col-lg-7">
           <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-success text-white fw-bold">
@@ -423,7 +419,7 @@
   </div>
 </div>
 
-<!-- MODAL TAMBAH PRODUK (ADMIN ONLY) -->
+<!-- MODAL TAMBAH PRODUK -->
 <div class="modal fade" id="modalTambahProduk" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -507,7 +503,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// Data Master Standar PT Lampung Bay Seafood
+// Master Data Standar PT Lampung Bay Seafood
 const defaultItemsTemplate = [
   { barcode: "SLP-01", kategori: "FORZEN SLIPER MEAT", size: "Size U-2 Oz", kodeProduksi: "PRD-SLP-01", unit: "Bag", sysQty: 1638, sysLbs: 8190, opQty: 1638, opLbs: 8190, ket: "" },
   { barcode: "GRP-01", kategori: "FROZEN FARMER GROUPER SKIN LESS", size: "4-6 oz", kodeProduksi: "PRD-GRP-01", unit: "Mc", sysQty: 0, sysLbs: 0, opQty: 0, opLbs: 0, ket: "" },
@@ -537,13 +533,18 @@ const defaultItemsTemplate = [
   { barcode: "CRB-01", kategori: "FROZEN CRABMEAT- CCF", size: "Standard", kodeProduksi: "PRD-CRB-01", unit: "Bag", sysQty: 290, sysLbs: 290, opQty: 290, opLbs: 290, ket: "" }
 ];
 
-// State & Role System
 let currentRole = localStorage.getItem('LBS_USER_ROLE') || 'admin';
 let firebaseDb = null;
 let currentSessionKey = "2026-08-31";
 let currentDocNomor = "008/KEU/OPNAME/LBS/AGUST/2026";
-let allSessions = {};
-let currentItems = [];
+let allSessions = {
+  "2026-08-31": {
+    docNomor: "008/KEU/OPNAME/LBS/AGUST/2026",
+    tanggal: "Senin, 31 Agustus 2026",
+    items: JSON.parse(JSON.stringify(defaultItemsTemplate))
+  }
+};
+let currentItems = JSON.parse(JSON.stringify(defaultItemsTemplate));
 
 function setRole(role) {
   currentRole = role;
@@ -570,34 +571,33 @@ function applyRoleUI() {
     btnAdmin.className = 'btn btn-sm btn-outline-light';
     roleBadge.className = 'badge bg-warning text-dark me-2';
     roleBadge.innerText = 'MODE: OPERATOR (COLD STORAGE)';
-    roleDesc.innerText = 'Akses terbatas: Scan barcode, hitung opname fisik, lihat daftar barcode & preview berita acara.';
+    roleDesc.innerText = 'Akses operator: Scan barcode, input opname fisik, cetak label & lihat laporan.';
     if (masterDesc) masterDesc.innerText = 'Mode Operator: Hanya dapat melihat data dan mencetak label barcode.';
   } else {
     btnAdmin.className = 'btn btn-sm btn-primary fw-bold active';
     btnOperator.className = 'btn btn-sm btn-outline-light';
     roleBadge.className = 'badge bg-primary me-2';
     roleBadge.innerText = 'MODE: ADMIN';
-    roleDesc.innerText = 'Akses penuh: Edit master stok, ubah kode produksi, tambah produk baru, buat sesi opname, dan unduh laporan.';
+    roleDesc.innerText = 'Akses penuh: Edit master stok, kode produksi, tambah produk baru, buat sesi opname, dan unduh laporan.';
     if (masterDesc) masterDesc.innerText = 'Mode Admin: Anda dapat mengedit stok, kode produksi, dan menambah item baru.';
   }
 
   renderInventoryTable();
 }
 
-function initLocalDataFirst() {
-  allSessions = JSON.parse(localStorage.getItem('LBS_LOCAL_SESSIONS')) || {
-    [currentSessionKey]: {
-      docNomor: currentDocNomor,
-      tanggal: "Senin, 31 Agustus 2026",
-      items: JSON.parse(JSON.stringify(defaultItemsTemplate))
-    }
-  };
+function initLocalData() {
+  const saved = localStorage.getItem('LBS_LOCAL_SESSIONS');
+  if (saved) {
+    try {
+      allSessions = JSON.parse(saved);
+    } catch(e) {}
+  }
   updateSessionDropdown();
   loadCurrentSessionData();
 }
 
 function initFirebase() {
-  initLocalDataFirst();
+  initLocalData();
   applyRoleUI();
 
   const firebaseConfig = {
@@ -623,7 +623,7 @@ function initFirebase() {
         document.getElementById('dbStatusBadge').className = 'badge bg-success d-flex align-items-center py-2 px-3';
       } else {
         document.getElementById('statusDot').className = 'status-dot status-offline';
-        document.getElementById('statusText').innerText = 'Mode Lokal (Offline)';
+        document.getElementById('statusText').innerText = 'Mode Lokal';
         document.getElementById('dbStatusBadge').className = 'badge bg-secondary d-flex align-items-center py-2 px-3';
       }
     });
@@ -631,6 +631,7 @@ function initFirebase() {
     firebaseDb.ref('inventory_sessions').on('value', (snapshot) => {
       const data = snapshot.val();
       if (!data) {
+        // Jika database masih null/kosong, otomatis isi dengan template awal
         firebaseDb.ref('inventory_sessions').set(allSessions);
       } else {
         allSessions = data;
@@ -640,7 +641,7 @@ function initFirebase() {
       }
     });
   } catch(e) {
-    console.warn("Firebase offline, berjalan normal via local:", e);
+    console.warn("Firebase offline:", e);
   }
 }
 
@@ -1013,7 +1014,6 @@ function stopCamera() {
   }
 }
 
-// Form Opname Save
 document.getElementById('formOpnameUpdate').addEventListener('submit', function(e) {
   e.preventDefault();
   const idx = document.getElementById('opnameItemIndex').value;
@@ -1046,7 +1046,6 @@ function resetOpnameForm() {
   document.getElementById('scanStatusAlert').classList.add('d-none');
 }
 
-// Tambah Produk Baru (Admin Only)
 document.getElementById('formTambahProdukBaru').addEventListener('submit', function(e) {
   e.preventDefault();
   if (currentRole !== 'admin') {
