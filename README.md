@@ -6,7 +6,7 @@ Versi ini mempertahankan dashboard modern dan seluruh modul versi sebelumnya.
 - Admin: email + password Firebase.
 - Operator: cukup masukkan PIN **0112**.
 - PIN tidak disimpan di Firestore dan tidak ditulis di `app.js`.
-- Backend Cloud Function memverifikasi PIN dan menerbitkan Firebase Custom Token untuk UID Operator `ZNakIBGkqrM49a4DeHCAZ8Rma4S2`.
+- Backend Cloud Function memverifikasi PIN dan menerbitkan Firebase Custom Token untuk UID Operator `OD1D85j502azoQzGuuBf7Hb5Bwp1`.
 
 ## Deploy sekali untuk PIN Operator
 Diperlukan Firebase CLI dan project `lbs-peminjaman`.
