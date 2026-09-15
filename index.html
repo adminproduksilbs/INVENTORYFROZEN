@@ -1,35 +1,16 @@
-<!doctype html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LBS Inventory</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<div id="loginPage">
-  <div class="card">
-    <h1>LBS Inventory</h1>
-    <p>PT Lampung Bay Seafood</p>
-    <input id="email" type="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Password">
-    <button id="loginBtn">Masuk</button>
-    <p id="loginError"></p>
-  </div>
-</div>
-
-<div id="appPage" class="hidden">
-<header><h1>LBS Inventory</h1><div><span id="userName"></span> <button id="logoutBtn">Keluar</button></div></header>
-<main>
-<div class="card"><h2>Dashboard</h2><p>Sistem Inventory & Opname PT Lampung Bay Seafood</p></div>
-<div class="grid">
-<div class="card"><h3>📦 Produk</h3><p>Kelola produk dan barcode.</p></div>
-<div class="card"><h3>📊 Inventory</h3><p>Lihat stok barang.</p></div>
-<div class="card"><h3>📝 Opname</h3><p>Catat stok fisik dan selisih.</p></div>
-<div class="card"><h3>📄 Laporan</h3><p>Export Excel dan PDF.</p></div>
-</div>
-</main>
-</div>
-<script type="module" src="app.js"></script>
-</body>
-</html>
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LBS Inventory</title><link rel="stylesheet" href="style.css"></head><body>
+<div id="loginPage" class="page"><div class="login-card"><h1>LBS Inventory</h1><p>PT Lampung Bay Seafood</p><input id="email" type="email" placeholder="Email"><input id="password" type="password" placeholder="Password"><button id="loginBtn" class="primary">Masuk</button><div id="loginError" class="error"></div></div></div>
+<div id="appPage" class="hidden"><header class="topbar"><b>LBS Inventory</b><div><span id="userName"></span> <button id="logoutBtn" class="light">Keluar</button></div></header><main class="container">
+<section id="dashboardView" class="view"><div class="hero card"><h2>Dashboard</h2><p>Sistem Inventory & Opname PT Lampung Bay Seafood</p></div><div class="grid">
+<button class="menu card" data-view="productsView"><strong>📦 Produk</strong><span>Kelola produk dan barcode.</span></button>
+<button class="menu card" data-view="inventoryView"><strong>📊 Inventory</strong><span>Lihat stok barang.</span></button>
+<button class="menu card" data-view="opnameView"><strong>📝 Opname</strong><span>Catat stok fisik dan selisih.</span></button>
+<button class="menu card" data-view="reportView"><strong>📄 Laporan</strong><span>Export Excel dan PDF.</span></button></div></section>
+<section id="productsView" class="view hidden"><div class="head"><div><button class="back" data-view="dashboardView">← Dashboard</button><h2>Data Produk</h2></div><button id="addProductBtn" class="primary">+ Tambah Produk</button></div>
+<div class="card toolbar"><input id="productSearch" placeholder="Cari kode, barcode, nama produk..."><span id="productCount"></span></div><div class="card tablewrap"><table><thead><tr><th>No</th><th>Barcode</th><th>Kode</th><th>Nama</th><th>Kategori</th><th>Satuan</th><th>Berat</th><th>Stok</th><th>Lokasi</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="productTableBody"></tbody></table><div id="productEmpty" class="empty hidden">Belum ada produk.</div></div></section>
+<section id="inventoryView" class="view hidden"><button class="back" data-view="dashboardView">← Dashboard</button><h2>Inventory</h2><div class="card note">Modul Inventory kita lanjutkan setelah Data Produk selesai.</div></section>
+<section id="opnameView" class="view hidden"><button class="back" data-view="dashboardView">← Dashboard</button><h2>Stok Opname</h2><div class="card note">Modul Stok Opname kita lanjutkan setelah Data Produk selesai.</div></section>
+<section id="reportView" class="view hidden"><button class="back" data-view="dashboardView">← Dashboard</button><h2>Laporan</h2><div class="card note">Modul Laporan Excel & PDF kita lanjutkan setelah Data Produk dan Opname selesai.</div></section>
+</main></div>
+<div id="productModal" class="modal hidden"><div class="modalbox"><div class="modalhead"><h3 id="modalTitle">Tambah Produk</h3><button id="closeModalBtn">×</button></div><form id="productForm"><input id="productId" type="hidden"><div class="formgrid">
+<label>Barcode<input id="barcode" required></label><label>Kode Produk<input id="kodeProduk" required></label><label class="full">Nama Produk<input id="namaProduk" required></label><label>Kategori<input id="kategori" list="categoryList" required><datalist id="categoryList"></datalist></label><label>Satuan<input id="satuan" required></label><label>Berat per Satuan<input id="beratPerSatuan" type="number" min="0" step=".01" value="0"></label><label>Stok<input id="stok" type="number" min="0" step=".01" value="0"></label><label>Stok LBS<input id="stokLbs" type="number" min="0" step=".01" value="0"></label><label>Lokasi<input id="lokasi" value="Cold Storage"></label><label>Status<select id="aktif"><option value="true">Aktif</option><option value="false">Nonaktif</option></select></label></div><div id="formError" class="error"></div><div class="modalactions"><button type="button" id="cancelModalBtn" class="secondary">Batal</button><button class="primary">Simpan</button></div></form></div></div><div id="toast"></div><script type="module" src="app.js"></script></body></html>
