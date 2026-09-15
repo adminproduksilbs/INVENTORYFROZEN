@@ -1,2 +1,3 @@
-# LBS Inventory v7
-Update utama: menu Produksi dengan scan barcode atau pilih produk manual, jumlah hasil produksi, tanggal, shift, keterangan, update stok atomik, dan riwayat transaksi bertipe PRODUKSI. Tetap menggunakan Firebase project dan koleksi yang sama.
+# LBS Inventory v9 – Sidebar Final
+
+Update tampilan navigasi sidebar sesuai permintaan. Urutan: Dashboard, Produksi, Inventory, Stok Masuk/Keluar, Stok Opname, Laporan, Pengguna, Produk. Tidak mengubah database Firebase.
