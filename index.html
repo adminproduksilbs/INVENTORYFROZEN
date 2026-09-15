@@ -16,7 +16,7 @@
 
   <style>
     body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #0f172a; }
-    .navbar-brand { font-weight: 700; }
+    .navbar-brand { font-weight: 700; letter-spacing: 0.5px; }
     .card-metric { border-radius: 10px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     .badge-code { font-family: monospace; font-size: 0.88rem; background: #e2e8f0; color: #0f172a; padding: 4px 8px; border-radius: 4px; }
     .nav-tabs .nav-link { font-weight: 600; color: #475569; padding: 12px 18px; border: none; border-bottom: 3px solid transparent; }
@@ -28,11 +28,12 @@
     .diff-minus { color: #dc2626; font-weight: bold; }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
     .status-online { background-color: #22c55e; box-shadow: 0 0 6px #22c55e; }
-    .status-offline { background-color: #0284c7; }
+    .status-local { background-color: #0284c7; }
   </style>
 </head>
-<body class="is-admin">
+<body>
 
+<!-- Navbar -->
 <nav class="navbar navbar-dark bg-dark px-3 py-2 shadow-sm border-bottom border-primary border-3">
   <div class="container-fluid">
     <span class="navbar-brand mb-0 h1 d-flex align-items-center">
@@ -42,8 +43,8 @@
     
     <div class="d-flex align-items-center gap-2">
       <span class="badge bg-secondary d-flex align-items-center py-2 px-3" id="dbStatusBadge">
-        <span class="status-dot status-offline" id="statusDot"></span>
-        <span id="statusText">Database Siap</span>
+        <span class="status-dot status-local" id="statusDot"></span>
+        <span id="statusText">Sistem Siap</span>
       </span>
 
       <div class="btn-group shadow-sm" role="group">
@@ -60,30 +61,35 @@
 
 <div class="container-fluid py-3 px-md-4">
 
+  <!-- Sesi Tanggal & Nomor Dokumen -->
   <div class="card shadow-sm border-0 mb-3 bg-white">
     <div class="card-body py-2 px-3">
       <div class="row align-items-center g-2">
-        <div class="col-md-5">
-          <label class="small fw-bold text-muted mb-0"><i class="bi bi-calendar-check me-1"></i> Sesi Tanggal Opname:</label>
-          <div class="input-group input-group-sm mt-1">
-            <select id="selectSession" class="form-select fw-bold text-primary" onchange="switchSession(this.value)"></select>
-            <button class="btn btn-outline-primary" type="button" onclick="promptNewSession()"><i class="bi bi-plus-circle me-1"></i> Sesi Baru</button>
-          </div>
+        <div class="col-md-3">
+          <label class="small fw-bold text-muted mb-0"><i class="bi bi-calendar-date me-1"></i> Tanggal Opname:</label>
+          <input type="date" id="inputDateSelect" class="form-control form-control-sm mt-1 fw-bold text-primary" onchange="changeDate(this.value)">
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
+          <label class="small fw-bold text-muted mb-0"><i class="bi bi-folder2-open me-1"></i> Sesi Tersimpan:</label>
+          <select id="selectSavedSession" class="form-select form-select-sm mt-1 fw-bold" onchange="loadSavedSession(this.value)">
+          </select>
+        </div>
+
+        <div class="col-md-3">
           <label class="small fw-bold text-muted mb-0"><i class="bi bi-card-text me-1"></i> Nomor Berita Acara:</label>
-          <input type="text" id="docNomor" class="form-control form-control-sm mt-1" value="008/KEU/OPNAME/LBS/AGUST/2026" onchange="updateDocMeta()">
+          <input type="text" id="docNomor" class="form-control form-control-sm mt-1" value="008/KEU/OPNAME/LBS/AGUST/2026" onchange="saveCurrentData()">
         </div>
 
         <div class="col-md-3 text-md-end pt-md-3">
-          <button class="btn btn-success btn-sm me-1 shadow-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Excel</button>
-          <button class="btn btn-danger btn-sm shadow-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> PDF</button>
+          <button class="btn btn-success btn-sm me-1 shadow-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Download Excel</button>
+          <button class="btn btn-danger btn-sm shadow-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Download PDF</button>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Menu Tab -->
   <ul class="nav nav-tabs mb-3 bg-white rounded-top shadow-sm px-2 pt-1" id="mainTab" role="tablist">
     <li class="nav-item">
       <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabMaster" type="button">
@@ -92,7 +98,7 @@
     </li>
     <li class="nav-item">
       <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabOpname" type="button">
-        <i class="bi bi-upc-scan text-warning me-1"></i> Scan Barcode & Update Stok
+        <i class="bi bi-upc-scan text-warning me-1"></i> Scan Barcode & Tambah Stok
       </button>
     </li>
     <li class="nav-item">
@@ -102,12 +108,13 @@
     </li>
     <li class="nav-item">
       <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLaporan" type="button">
-        <i class="bi bi-file-earmark-spreadsheet text-info me-1"></i> Berita Acara & Unduh
+        <i class="bi bi-file-earmark-spreadsheet text-info me-1"></i> Preview Berita Acara
       </button>
     </li>
   </ul>
 
-  <div class="tab-content" id="mainTabContent">
+  <!-- Tab Konten -->
+  <div class="tab-content">
 
     <!-- TAB 1: MASTER STOK -->
     <div class="tab-pane fade show active" id="tabMaster">
@@ -115,27 +122,30 @@
         <div class="card-body">
           <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
-              <h5 class="card-title fw-bold mb-0">Data Stok & Barcode Master</h5>
-              <small class="text-muted">Klik tombol hijau <b>+ Tambah</b> untuk input stok masuk, atau ketik langsung di tabel.</small>
+              <h5 class="card-title fw-bold mb-0">Daftar Stok Produk Cold Storage</h5>
+              <small class="text-muted">Klik tombol hijau <b>+ Stok</b> untuk input stok masuk, atau ketik langsung di tabel.</small>
             </div>
-            <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#modalTambahProduk">
-              <i class="bi bi-plus-circle me-1"></i> Tambah Produk / Size Baru
-            </button>
+            <div>
+              <button class="btn btn-outline-danger btn-sm me-2" type="button" onclick="forceResetDefault()"><i class="bi bi-arrow-counterclockwise"></i> Reset Default Data</button>
+              <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#modalTambahProduk">
+                <i class="bi bi-plus-circle me-1"></i> Tambah Produk / Size Baru
+              </button>
+            </div>
           </div>
 
           <div class="table-responsive">
             <table class="table table-bordered table-hover align-middle table-sm">
               <thead class="table-dark">
                 <tr>
-                  <th style="width: 45px;" class="text-center">No</th>
+                  <th style="width: 40px;" class="text-center">No</th>
                   <th>Barcode</th>
                   <th>Nama Barang & Size</th>
-                  <th>Unit</th>
+                  <th class="text-center">Satuan</th>
                   <th>Kode Produksi</th>
                   <th class="text-end" style="width: 110px;">Stok Qty</th>
                   <th class="text-end" style="width: 120px;">Berat (Lbs)</th>
                   <th>Keterangan</th>
-                  <th class="text-center" style="width: 140px;">Aksi Cepat</th>
+                  <th class="text-center" style="width: 160px;">Aksi Cepat</th>
                 </tr>
               </thead>
               <tbody id="inventoryTableBody"></tbody>
@@ -151,13 +161,13 @@
         <div class="col-lg-5">
           <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-primary text-white fw-bold">
-              <i class="bi bi-upc-scan me-2"></i>Scanner Barcode
+              <i class="bi bi-upc-scan me-2"></i>Scanner Barcode Cold Storage
             </div>
             <div class="card-body">
               <ul class="nav nav-pills nav-fill mb-3" role="tablist">
                 <li class="nav-item">
                   <button class="nav-link active py-2" data-bs-toggle="pill" data-bs-target="#subGunScan" type="button">
-                    <i class="bi bi-upc"></i> Scanner Tembak / Ketik
+                    <i class="bi bi-upc"></i> Scanner Tembak / Input
                   </button>
                 </li>
                 <li class="nav-item">
@@ -170,7 +180,7 @@
               <div class="tab-content">
                 <div class="tab-pane fade show active" id="subGunScan">
                   <div class="scanner-box mb-3">
-                    <label class="form-label fw-bold text-primary mb-1">Tembak / Input Barcode:</label>
+                    <label class="form-label fw-bold text-primary mb-1">Tembak / Masukkan Kode Barcode:</label>
                     <div class="input-group">
                       <span class="input-group-text"><i class="bi bi-upc fs-5"></i></span>
                       <input type="text" id="barcodeScannerInput" class="form-control form-control-lg fw-bold" placeholder="Scan barcode..." autofocus>
@@ -182,9 +192,9 @@
                 <div class="tab-pane fade" id="subCamScan">
                   <div class="text-center mb-3">
                     <div id="reader"></div>
-                    <small class="text-muted d-block mt-2">Arahkan kamera HP ke barcode kemasan produk</small>
+                    <small class="text-muted d-block mt-2">Arahkan kamera ke barcode produk</small>
                     <div class="mt-2">
-                      <button class="btn btn-sm btn-outline-danger" type="button" onclick="stopCamera()"><i class="bi bi-camera-video-off"></i> Tutup Kamera</button>
+                      <button class="btn btn-sm btn-outline-danger" type="button" onclick="stopCamera()"><i class="bi bi-camera-video-off"></i> Matikan Kamera</button>
                       <button class="btn btn-sm btn-outline-primary" type="button" onclick="initCamera()"><i class="bi bi-arrow-clockwise"></i> Reset Kamera</button>
                     </div>
                   </div>
@@ -194,7 +204,7 @@
               <div id="scanStatusAlert" class="alert alert-info d-none mb-3"></div>
 
               <div class="p-3 bg-light rounded border">
-                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Shortcut Uji Coba:</h6>
+                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Tombol Cepat Tes Barcode:</h6>
                 <div class="d-flex flex-wrap gap-1">
                   <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('SLP-01')">SLP-01</button>
                   <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('GRP-04')">GRP-04</button>
@@ -210,7 +220,7 @@
         <div class="col-lg-7">
           <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
-              <span><i class="bi bi-pencil-square me-2"></i>Form Update Stok</span>
+              <span><i class="bi bi-pencil-square me-2"></i>Form Update Stok Produk</span>
               <span class="badge bg-light text-success" id="actionModeBadge">Mode: Tambah Stok Masuk</span>
             </div>
             <div class="card-body">
@@ -223,18 +233,18 @@
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label fw-bold">Pilih Tindakan:</label>
+                  <label class="form-label fw-bold">Pilih Aksi:</label>
                   <div class="d-flex gap-3 p-2 bg-light rounded border">
                     <div class="form-check">
-                      <input class="form-check-input" type="radio" name="updateActionType" id="actTambah" value="tambah" checked onchange="toggleActionType()">
+                      <input class="form-check-input" type="radio" name="actionType" id="actTambah" value="tambah" checked onchange="toggleAction()">
                       <label class="form-check-label fw-bold text-success" for="actTambah">
                         <i class="bi bi-plus-circle-fill"></i> Tambah Stok Masuk (+ Qty)
                       </label>
                     </div>
                     <div class="form-check">
-                      <input class="form-check-input" type="radio" name="updateActionType" id="actOpname" value="opname" onchange="toggleActionType()">
+                      <input class="form-check-input" type="radio" name="actionType" id="actOpname" value="opname" onchange="toggleAction()">
                       <label class="form-check-label fw-bold text-primary" for="actOpname">
-                        <i class="bi bi-clipboard-check"></i> Hasil Stock Opname (Fisik Riil)
+                        <i class="bi bi-clipboard-check"></i> Opname Fisik (Hitungan Real)
                       </label>
                     </div>
                   </div>
@@ -246,8 +256,8 @@
                     <input type="text" id="opnameKodeProduksi" class="form-control" placeholder="Contoh: PRD-2026-09">
                   </div>
                   <div class="col-md-6 mb-3">
-                    <label class="form-label">Keterangan</label>
-                    <input type="text" id="opnameKeterangan" class="form-control" placeholder="Contoh: Simpan Cold Room 1">
+                    <label class="form-label">Keterangan Khusus</label>
+                    <input type="text" id="opnameKeterangan" class="form-control" placeholder="Contoh: Cold Room 1">
                   </div>
                 </div>
 
@@ -265,21 +275,21 @@
                   </div>
 
                   <div class="col-md-6">
-                    <h6 class="text-success fw-bold mb-2" id="inputSectionTitle">Tambahan Stok Masuk Baru</h6>
+                    <h6 class="text-success fw-bold mb-2" id="boxTitleInput">Tambahan Stok Masuk Baru</h6>
                     <div class="mb-2">
-                      <label class="small text-muted fw-bold" id="lblInputQty">Tambah Qty (+)</label>
-                      <input type="number" id="opnameRealQty" class="form-control border-success fw-bold text-success" placeholder="Contoh: 10" required>
+                      <label class="small text-muted fw-bold" id="lblInputQty">Jumlah Tambahan (Qty)</label>
+                      <input type="number" id="opnameValQty" class="form-control border-success fw-bold text-success" placeholder="Contoh: 10" required>
                     </div>
                     <div>
-                      <label class="small text-muted fw-bold" id="lblInputLbs">Tambah Berat Lbs (+)</label>
-                      <input type="number" step="any" id="opnameRealLbs" class="form-control border-success fw-bold text-success" placeholder="Contoh: 200" required>
+                      <label class="small text-muted fw-bold" id="lblInputLbs">Berat Tambahan (Lbs)</label>
+                      <input type="number" step="any" id="opnameValLbs" class="form-control border-success fw-bold text-success" placeholder="Contoh: 100" required>
                     </div>
                   </div>
                 </div>
 
                 <div class="d-flex justify-content-end gap-2">
-                  <button type="button" class="btn btn-secondary" onclick="resetOpnameForm()">Reset</button>
-                  <button type="submit" class="btn btn-success px-4" id="btnSimpanUpdate"><i class="bi bi-cloud-arrow-up me-1"></i> Simpan ke Stok</button>
+                  <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset</button>
+                  <button type="submit" class="btn btn-success px-4" id="btnSubmitForm"><i class="bi bi-save me-1"></i> Simpan ke Stok</button>
                 </div>
               </form>
             </div>
@@ -293,13 +303,13 @@
       <div class="row g-3 mb-3">
         <div class="col-md-3">
           <div class="card card-metric bg-white p-3 border-start border-primary border-4">
-            <h6 class="text-muted small mb-1">TOTAL PRODUK / SIZE</h6>
+            <h6 class="text-muted small mb-1">TOTAL VARIAN PRODUK</h6>
             <h3 id="dashTotalItem" class="fw-bold mb-0 text-primary">0</h3>
           </div>
         </div>
         <div class="col-md-3">
           <div class="card card-metric bg-white p-3 border-start border-success border-4">
-            <h6 class="text-muted small mb-1">TOTAL QTY (MC / BAG)</h6>
+            <h6 class="text-muted small mb-1">TOTAL STOK (QTY)</h6>
             <h3 id="dashTotalQty" class="fw-bold mb-0 text-success">0</h3>
           </div>
         </div>
@@ -311,14 +321,14 @@
         </div>
         <div class="col-md-3">
           <div class="card card-metric bg-white p-3 border-start border-danger border-4">
-            <h6 class="text-muted small mb-1">ITEM ADA SELISIH</h6>
+            <h6 class="text-muted small mb-1">VARIAN SELISIH OPNAME</h6>
             <h3 id="dashTotalSelisih" class="fw-bold text-danger mb-0">0</h3>
           </div>
         </div>
       </div>
 
       <div class="card shadow-sm border-0 mb-3">
-        <div class="card-header bg-white py-3 fw-bold">Status Kategori Produk</div>
+        <div class="card-header bg-white py-3 fw-bold">Ringkasan per Kategori</div>
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table table-hover mb-0">
@@ -326,8 +336,8 @@
                 <tr>
                   <th>Kategori Produk</th>
                   <th class="text-center">Jumlah Varian</th>
-                  <th class="text-end">Stok Sistem (Qty)</th>
-                  <th class="text-end">Stok Sistem (Lbs)</th>
+                  <th class="text-end">Total Stok (Qty)</th>
+                  <th class="text-end">Total Berat (Lbs)</th>
                   <th class="text-end">Hasil Opname (Lbs)</th>
                   <th class="text-center">Status</th>
                 </tr>
@@ -349,8 +359,8 @@
               <div class="small text-muted">PT. Lampung Bay Seafood — Jl. Raya Tanjung Bintang No. 101 Desa Serdang, Kec. Tanjung Bintang</div>
             </div>
             <div class="d-flex gap-2">
-              <button class="btn btn-success btn-sm shadow-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Unduh Excel (.xlsx)</button>
-              <button class="btn btn-danger btn-sm shadow-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Unduh PDF (.pdf)</button>
+              <button class="btn btn-success btn-sm shadow-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Download Excel</button>
+              <button class="btn btn-danger btn-sm shadow-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Download PDF</button>
             </div>
           </div>
         </div>
@@ -383,45 +393,50 @@
   </div>
 </div>
 
-<!-- MODAL CETAK BARCODE -->
-<div class="modal fade" id="modalBarcodeLabel" tabindex="-1">
+<!-- MODAL QUICK TAMBAH STOK -->
+<div class="modal fade" id="modalQuickTambahStok" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content text-center">
-      <div class="modal-header bg-dark text-white">
-        <h5 class="modal-title">Label Barcode Produk</h5>
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title"><i class="bi bi-plus-circle me-1"></i> Tambah Stok Masuk</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body p-4" id="printableBarcodeArea">
-        <h5 id="lblNama" class="fw-bold mb-1 text-primary">Nama Produk</h5>
-        <div id="lblSize" class="text-muted mb-2">Size / Varian</div>
-        <div class="my-3 d-flex justify-content-center">
-          <svg id="barcodeSvg"></svg>
+      <div class="modal-body">
+        <input type="hidden" id="quickIndex">
+        <h6 class="fw-bold text-primary mb-1" id="quickNamaBarang">Nama Produk</h6>
+        <p class="small text-muted mb-3" id="quickInfoStok">Stok Sekarang: 0</p>
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Jumlah Tambahan (Qty):</label>
+          <input type="number" id="quickAddQty" class="form-control form-control-lg fw-bold" placeholder="Contoh: 10" required>
         </div>
-        <div class="badge bg-secondary mb-2" id="lblKode">BATCH: -</div>
-        <p class="small text-muted mb-0">PT. Lampung Bay Seafood</p>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Berat Tambahan (Lbs):</label>
+          <input type="number" step="any" id="quickAddLbs" class="form-control form-control-lg fw-bold" placeholder="Contoh: 200" required>
+        </div>
       </div>
-      <div class="modal-footer justify-content-center">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-        <button type="button" class="btn btn-primary" onclick="printBarcodeLabel()"><i class="bi bi-printer me-1"></i> Cetak Label</button>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-success px-4" onclick="saveQuickStock()"><i class="bi bi-check2-circle me-1"></i> Tambahkan Sekarang</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- MODAL TAMBAH PRODUK -->
+<!-- MODAL TAMBAH PRODUK BARU -->
 <div class="modal fade" id="modalTambahProduk" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <form id="formTambahProdukBaru">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title">Tambah Produk / Item Baru</h5>
+          <h5 class="modal-title">Tambah Produk / Size Baru</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label fw-bold">Kategori Produk</label>
-              <input type="text" id="newCategory" class="form-control" placeholder="Nama kategori" required>
+              <input type="text" id="newCategory" class="form-control" placeholder="Contoh: FROZEN OCTOPUS" required>
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label fw-bold">Size / Varian</label>
@@ -432,14 +447,14 @@
           <div class="row">
             <div class="col-md-4 mb-3">
               <label class="form-label fw-bold">Barcode Unik</label>
-              <input type="text" id="newBarcode" class="form-control" placeholder="Scan / ketik barcode" required>
+              <input type="text" id="newBarcode" class="form-control" placeholder="Contoh: OCT-NEW-01" required>
             </div>
             <div class="col-md-4 mb-3">
               <label class="form-label fw-bold">Kode Produksi</label>
               <input type="text" id="newKodeProduksi" class="form-control" placeholder="Contoh: PRD-2026-09" required>
             </div>
             <div class="col-md-4 mb-3">
-              <label class="form-label fw-bold">Satuan</label>
+              <label class="form-label fw-bold">Satuan (Unit)</label>
               <select id="newUnit" class="form-select">
                 <option value="Mc">Mc (Master Carton)</option>
                 <option value="Bag">Bag</option>
@@ -461,14 +476,39 @@
 
           <div class="mb-3">
             <label class="form-label">Keterangan</label>
-            <input type="text" id="newKeterangan" class="form-control" placeholder="Keterangan item...">
+            <input type="text" id="newKeterangan" class="form-control" placeholder="Keterangan penyimpanan...">
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-          <button type="submit" class="btn btn-primary">Simpan ke Database</button>
+          <button type="submit" class="btn btn-primary">Simpan ke Master</button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CETAK BARCODE -->
+<div class="modal fade" id="modalBarcodeLabel" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title">Cetak Label Barcode</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4" id="printableBarcodeArea">
+        <h5 id="lblNama" class="fw-bold mb-1 text-primary">Nama Produk</h5>
+        <div id="lblSize" class="text-muted mb-2">Size / Varian</div>
+        <div class="my-3 d-flex justify-content-center">
+          <svg id="barcodeSvg"></svg>
+        </div>
+        <div class="badge bg-secondary mb-2" id="lblKode">BATCH: -</div>
+        <p class="small text-muted mb-0">PT. Lampung Bay Seafood</p>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+        <button type="button" class="btn btn-primary" onclick="printBarcodeLabel()"><i class="bi bi-printer me-1"></i> Cetak Sekarang</button>
+      </div>
     </div>
   </div>
 </div>
@@ -476,7 +516,8 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-const defaultItemsTemplate = [
+// Master Data Seafood Default Sesuai Berita Acara
+const initialItems = [
   { barcode: "SLP-01", kategori: "FORZEN SLIPER MEAT", size: "Size U-2 Oz", kodeProduksi: "PRD-SLP-01", unit: "Bag", sysQty: 1638, sysLbs: 8190, opQty: 1638, opLbs: 8190, ket: "" },
   { barcode: "GRP-01", kategori: "FROZEN FARMER GROUPER SKIN LESS", size: "4-6 oz", kodeProduksi: "PRD-GRP-01", unit: "Mc", sysQty: 0, sysLbs: 0, opQty: 0, opLbs: 0, ket: "" },
   { barcode: "GRP-02", kategori: "FROZEN FARMER GROUPER SKIN LESS", size: "6-8 oz", kodeProduksi: "PRD-GRP-02", unit: "Mc", sysQty: 0, sysLbs: 0, opQty: 0, opLbs: 0, ket: "" },
@@ -505,148 +546,148 @@ const defaultItemsTemplate = [
   { barcode: "CRB-01", kategori: "FROZEN CRABMEAT- CCF", size: "Standard", kodeProduksi: "PRD-CRB-01", unit: "Bag", sysQty: 290, sysLbs: 290, opQty: 290, opLbs: 290, ket: "" }
 ];
 
-let currentRole = 'admin';
-let currentSessionKey = "2026-08-31";
-let currentDocNomor = "008/KEU/OPNAME/LBS/AGUST/2026";
-let allSessions = {
-  "2026-08-31": {
-    docNomor: "008/KEU/OPNAME/LBS/AGUST/2026",
-    tanggal: "Senin, 31 Agustus 2026",
-    items: JSON.parse(JSON.stringify(defaultItemsTemplate))
-  }
-};
-let currentItems = JSON.parse(JSON.stringify(defaultItemsTemplate));
+let currentDate = "2026-08-31";
+let allSessions = {};
+let currentItems = [];
 
-// Endpoint REST Firebase
-const FIREBASE_REST_URL = "https://lbs-inventory-85220-default-rtdb.asia-southeast1.firebasedatabase.app/inventory_sessions.json";
+const FB_URL = "https://lbs-inventory-85220-default-rtdb.asia-southeast1.firebasedatabase.app/inventory_sessions.json";
 
 function initApp() {
-  const saved = localStorage.getItem('LBS_LOCAL_SESSIONS');
+  const elDate = document.getElementById('inputDateSelect');
+  if (elDate) elDate.value = currentDate;
+
+  const saved = localStorage.getItem('LBS_STORAGE_FINAL_V2');
   if (saved) {
     try { allSessions = JSON.parse(saved); } catch(e) {}
   }
-  updateSessionDropdown();
-  loadCurrentSessionData();
+
+  // Wajib ada sesi awal
+  if (!allSessions || typeof allSessions !== 'object' || Object.keys(allSessions).length === 0 || !allSessions[currentDate] || !allSessions[currentDate].items) {
+    allSessions = {
+      [currentDate]: {
+        docNomor: "008/KEU/OPNAME/LBS/AGUST/2026",
+        items: JSON.parse(JSON.stringify(initialItems))
+      }
+    };
+    localStorage.setItem('LBS_STORAGE_FINAL_V2', JSON.stringify(allSessions));
+  }
+
+  loadSession(currentDate);
+  updateSessionList();
   renderAll();
-  syncFromFirebase();
+  syncFirebase();
 }
 
-function syncFromFirebase() {
-  fetch(FIREBASE_REST_URL)
-    .then(res => res.json())
+function syncFirebase() {
+  fetch(FB_URL)
+    .then(r => r.json())
     .then(data => {
-      if (data) {
+      if (data && typeof data === 'object' && Object.keys(data).length > 0) {
         allSessions = data;
-        localStorage.setItem('LBS_LOCAL_SESSIONS', JSON.stringify(allSessions));
-        updateSessionDropdown();
-        loadCurrentSessionData();
+        localStorage.setItem('LBS_STORAGE_FINAL_V2', JSON.stringify(allSessions));
+        loadSession(currentDate);
+        updateSessionList();
       } else {
-        pushToFirebase();
+        pushFirebase();
       }
-      document.getElementById('statusDot').className = 'status-dot status-online';
-      document.getElementById('statusText').innerText = 'Firebase Online';
-      document.getElementById('dbStatusBadge').className = 'badge bg-success d-flex align-items-center py-2 px-3';
+      const badge = document.getElementById('dbStatusBadge');
+      if (badge) {
+        badge.className = "badge bg-success d-flex align-items-center py-2 px-3";
+        document.getElementById('statusText').innerText = "Firebase Terhubung";
+      }
     })
-    .catch(err => {
-      console.warn("REST offline:", err);
-      document.getElementById('statusDot').className = 'status-dot status-offline';
-      document.getElementById('statusText').innerText = 'Mode Lokal';
+    .catch(() => {
+      const badge = document.getElementById('dbStatusBadge');
+      if (badge) {
+        badge.className = "badge bg-primary d-flex align-items-center py-2 px-3";
+        document.getElementById('statusText').innerText = "Mode Lokal Siap";
+      }
     });
 }
 
-function pushToFirebase() {
-  fetch(FIREBASE_REST_URL, {
+function pushFirebase() {
+  fetch(FB_URL, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(allSessions)
-  }).then(() => {
-    document.getElementById('statusDot').className = 'status-dot status-online';
-    document.getElementById('statusText').innerText = 'Firebase Online';
-    document.getElementById('dbStatusBadge').className = 'badge bg-success d-flex align-items-center py-2 px-3';
-  }).catch(e => console.warn(e));
+  }).catch(() => {});
 }
 
-function persistSession(sessionKey, sessionData) {
-  allSessions[sessionKey] = sessionData;
-  localStorage.setItem('LBS_LOCAL_SESSIONS', JSON.stringify(allSessions));
+function saveCurrentData() {
+  const docNo = document.getElementById('docNomor').value;
+  allSessions[currentDate] = {
+    docNomor: docNo,
+    items: currentItems
+  };
+  localStorage.setItem('LBS_STORAGE_FINAL_V2', JSON.stringify(allSessions));
   renderAll();
-  pushToFirebase();
+  pushFirebase();
 }
 
-function updateSessionDropdown() {
-  const sel = document.getElementById('selectSession');
+function forceResetDefault() {
+  if (confirm("Reset ulang seluruh tabel ke data master seafood default?")) {
+    allSessions[currentDate] = {
+      docNomor: "008/KEU/OPNAME/LBS/AGUST/2026",
+      items: JSON.parse(JSON.stringify(initialItems))
+    };
+    saveCurrentData();
+    location.reload();
+  }
+}
+
+function changeDate(newDate) {
+  if (!newDate) return;
+  currentDate = newDate;
+  
+  if (!allSessions[currentDate]) {
+    allSessions[currentDate] = {
+      docNomor: "009/KEU/OPNAME/LBS/" + newDate,
+      items: JSON.parse(JSON.stringify(initialItems))
+    };
+  }
+
+  loadSession(currentDate);
+  updateSessionList();
+}
+
+function loadSavedSession(dateKey) {
+  if (!dateKey) return;
+  currentDate = dateKey;
+  document.getElementById('inputDateSelect').value = dateKey;
+  loadSession(dateKey);
+}
+
+function loadSession(dateKey) {
+  if (allSessions[dateKey]) {
+    currentItems = allSessions[dateKey].items || [];
+    document.getElementById('docNomor').value = allSessions[dateKey].docNomor || "008/KEU/OPNAME/LBS/AGUST/2026";
+  } else {
+    currentItems = JSON.parse(JSON.stringify(initialItems));
+  }
+  renderAll();
+}
+
+function updateSessionList() {
+  const sel = document.getElementById('selectSavedSession');
   if (!sel) return;
   sel.innerHTML = '';
-  const keys = Object.keys(allSessions).sort().reverse();
-  keys.forEach(k => {
-    const s = allSessions[k];
+  const dates = Object.keys(allSessions).sort().reverse();
+  dates.forEach(d => {
     const opt = document.createElement('option');
-    opt.value = k;
-    opt.innerText = `${s.tanggal || k} (${s.docNomor || k})`;
-    if (k === currentSessionKey) opt.selected = true;
+    opt.value = d;
+    opt.innerText = "Tanggal: " + d + " (" + (allSessions[d].docNomor || "") + ")";
+    if (d === currentDate) opt.selected = true;
     sel.appendChild(opt);
   });
 }
 
-function switchSession(key) {
-  currentSessionKey = key;
-  loadCurrentSessionData();
-}
-
-function loadCurrentSessionData() {
-  if (allSessions[currentSessionKey]) {
-    const sess = allSessions[currentSessionKey];
-    currentItems = sess.items || [];
-    currentDocNomor = sess.docNomor || "008/KEU/OPNAME/LBS/AGUST/2026";
-    const elDoc = document.getElementById('docNomor');
-    if (elDoc) elDoc.value = currentDocNomor;
-  } else {
-    currentItems = JSON.parse(JSON.stringify(defaultItemsTemplate));
-  }
-  renderAll();
-}
-
-function promptNewSession() {
-  const now = new Date();
-  const defaultDateStr = now.toISOString().split('T')[0];
-  const dateInput = prompt("Masukkan Tanggal Sesi Baru (YYYY-MM-DD):", defaultDateStr);
-  if (!dateInput) return;
-
-  if (allSessions[dateInput]) {
-    alert("Sesi tanggal ini sudah ada!");
-    currentSessionKey = dateInput;
-    loadCurrentSessionData();
-    return;
-  }
-
-  const docNo = prompt("Masukkan Nomor Berita Acara:", `009/KEU/OPNAME/LBS/${now.toLocaleString('id-ID', {month:'short'}).toUpperCase()}/${now.getFullYear()}`);
-  
-  allSessions[dateInput] = {
-    docNomor: docNo || "001/KEU/OPNAME/LBS",
-    tanggal: now.toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' }),
-    items: JSON.parse(JSON.stringify(defaultItemsTemplate))
-  };
-
-  currentSessionKey = dateInput;
-  persistSession(dateInput, allSessions[dateInput]);
-  updateSessionDropdown();
-}
-
-function updateDocMeta() {
-  const newDocNo = document.getElementById('docNomor').value;
-  if (allSessions[currentSessionKey]) {
-    allSessions[currentSessionKey].docNomor = newDocNo;
-    persistSession(currentSessionKey, allSessions[currentSessionKey]);
-  }
-}
-
 function renderAll() {
-  renderInventoryTable();
+  renderTable();
   renderDashboard();
   renderLaporan();
 }
 
-function renderInventoryTable() {
+function renderTable() {
   const tbody = document.getElementById('inventoryTableBody');
   if (!tbody) return;
   tbody.innerHTML = '';
@@ -662,21 +703,21 @@ function renderInventoryTable() {
         </td>
         <td class="text-center"><span class="badge bg-secondary">${item.unit}</span></td>
         <td>
-          <input type="text" class="form-control form-control-sm" value="${item.kodeProduksi || ''}" onchange="updateItemField(${idx}, 'kodeProduksi', this.value)">
+          <input type="text" class="form-control form-control-sm" value="${item.kodeProduksi || ''}" onchange="editField(${idx}, 'kodeProduksi', this.value)">
         </td>
         <td>
-          <input type="number" class="form-control form-control-sm text-end fw-bold" value="${item.sysQty}" onchange="updateItemField(${idx}, 'sysQty', Number(this.value))">
+          <input type="number" class="form-control form-control-sm text-end fw-bold" value="${item.sysQty}" onchange="editField(${idx}, 'sysQty', Number(this.value))">
         </td>
         <td>
-          <input type="number" step="any" class="form-control form-control-sm text-end fw-bold text-primary" value="${item.sysLbs}" onchange="updateItemField(${idx}, 'sysLbs', Number(this.value))">
+          <input type="number" step="any" class="form-control form-control-sm text-end fw-bold text-primary" value="${item.sysLbs}" onchange="editField(${idx}, 'sysLbs', Number(this.value))">
         </td>
         <td>
-          <input type="text" class="form-control form-control-sm" value="${item.ket || ''}" placeholder="Keterangan..." onchange="updateItemField(${idx}, 'ket', this.value)">
+          <input type="text" class="form-control form-control-sm" value="${item.ket || ''}" placeholder="Keterangan..." onchange="editField(${idx}, 'ket', this.value)">
         </td>
         <td class="text-center">
           <div class="btn-group btn-group-sm">
-            <button class="btn btn-success" type="button" onclick="quickAddStockModal(${idx})" title="Tambah Stok Masuk"><i class="bi bi-plus-lg"></i> Tambah</button>
-            <button class="btn btn-outline-dark" type="button" onclick="showBarcodeModal(${idx})" title="Cetak Barcode"><i class="bi bi-qr-code"></i></button>
+            <button class="btn btn-success" type="button" onclick="openQuickAddModal(${idx})" title="Tambah Stok"><i class="bi bi-plus-lg"></i> + Stok</button>
+            <button class="btn btn-outline-dark" type="button" onclick="showBarcodeModal(${idx})" title="Barcode"><i class="bi bi-qr-code"></i></button>
             <button class="btn btn-outline-danger" type="button" onclick="deleteItem(${idx})" title="Hapus"><i class="bi bi-trash"></i></button>
           </div>
         </td>
@@ -685,40 +726,51 @@ function renderInventoryTable() {
   });
 }
 
-function updateItemField(idx, field, val) {
+function editField(idx, field, val) {
   currentItems[idx][field] = val;
   if (field === 'sysQty') currentItems[idx].opQty = val;
   if (field === 'sysLbs') currentItems[idx].opLbs = val;
-  allSessions[currentSessionKey].items = currentItems;
-  persistSession(currentSessionKey, allSessions[currentSessionKey]);
+  saveCurrentData();
 }
 
-function quickAddStockModal(idx) {
+function openQuickAddModal(idx) {
   const item = currentItems[idx];
-  const tQty = prompt(`TAMBAH STOK MASUK:\n${item.kategori} (${item.size})\nStok saat ini: ${item.sysQty} ${item.unit}\n\nMasukkan Jumlah Tambahan (Qty):`, "10");
-  if (tQty === null) return;
+  document.getElementById('quickIndex').value = idx;
+  document.getElementById('quickNamaBarang').innerText = item.kategori + " (" + item.size + ")";
+  document.getElementById('quickInfoStok').innerText = "Stok Saat Ini: " + item.sysQty + " " + item.unit + " | " + item.sysLbs + " Lbs";
+  document.getElementById('quickAddQty').value = "";
+  document.getElementById('quickAddLbs').value = "";
   
-  const tLbs = prompt(`Masukkan Tambahan Berat (Lbs):`, "100");
-  if (tLbs === null) return;
+  const m = new bootstrap.Modal(document.getElementById('modalQuickTambahStok'));
+  m.show();
+  setTimeout(() => document.getElementById('quickAddQty').focus(), 300);
+}
 
-  const nQ = Number(tQty) || 0;
-  const nL = Number(tLbs) || 0;
+function saveQuickStock() {
+  const idx = document.getElementById('quickIndex').value;
+  const addQ = Number(document.getElementById('quickAddQty').value) || 0;
+  const addL = Number(document.getElementById('quickAddLbs').value) || 0;
 
-  item.sysQty = (Number(item.sysQty) || 0) + nQ;
-  item.sysLbs = (Number(item.sysLbs) || 0) + nL;
+  if (addQ === 0 && addL === 0) {
+    alert("Masukkan jumlah Qty atau Berat Lbs!");
+    return;
+  }
+
+  const item = currentItems[idx];
+  item.sysQty = (Number(item.sysQty) || 0) + addQ;
+  item.sysLbs = (Number(item.sysLbs) || 0) + addL;
   item.opQty = item.sysQty;
   item.opLbs = item.sysLbs;
 
-  allSessions[currentSessionKey].items = currentItems;
-  persistSession(currentSessionKey, allSessions[currentSessionKey]);
-  alert(`Berhasil menambahkan +${nQ} ${item.unit} (+${nL} Lbs) ke stok!`);
+  saveCurrentData();
+  bootstrap.Modal.getInstance(document.getElementById('modalQuickTambahStok')).hide();
+  alert("Berhasil menambahkan +" + addQ + " " + item.unit + " (+" + addL + " Lbs) ke stok " + item.kategori + "!");
 }
 
 function deleteItem(idx) {
-  if (confirm(`Hapus item ${currentItems[idx].kategori} (${currentItems[idx].size})?`)) {
+  if (confirm("Hapus item " + currentItems[idx].kategori + " (" + currentItems[idx].size + ")?")) {
     currentItems.splice(idx, 1);
-    allSessions[currentSessionKey].items = currentItems;
-    persistSession(currentSessionKey, allSessions[currentSessionKey]);
+    saveCurrentData();
   }
 }
 
@@ -726,20 +778,18 @@ function renderDashboard() {
   const elTotal = document.getElementById('dashTotalItem');
   if (!elTotal) return;
   elTotal.innerText = currentItems.length;
-  
-  const totalQty = currentItems.reduce((acc, i) => acc + (Number(i.sysQty) || 0), 0);
-  const totalLbs = currentItems.reduce((acc, i) => acc + (Number(i.sysLbs) || 0), 0);
-  
-  document.getElementById('dashTotalQty').innerText = totalQty.toLocaleString('id-ID');
-  document.getElementById('dashTotalLbs').innerText = totalLbs.toLocaleString('id-ID', {maximumFractionDigits: 2}) + ' Lbs';
+  const tQ = currentItems.reduce((a, b) => a + (Number(b.sysQty) || 0), 0);
+  const tL = currentItems.reduce((a, b) => a + (Number(b.sysLbs) || 0), 0);
+  document.getElementById('dashTotalQty').innerText = tQ.toLocaleString('id-ID');
+  document.getElementById('dashTotalLbs').innerText = tL.toLocaleString('id-ID', {maximumFractionDigits: 2}) + ' Lbs';
 
-  let countSelisih = 0;
+  let diffCount = 0;
   currentItems.forEach(i => {
-    const diffQty = (Number(i.opQty) || 0) - (Number(i.sysQty) || 0);
-    const diffLbs = (Number(i.opLbs) || 0) - (Number(i.sysLbs) || 0);
-    if (diffQty !== 0 || Math.abs(diffLbs) > 0.01) countSelisih++;
+    const dQ = (Number(i.opQty) || 0) - (Number(i.sysQty) || 0);
+    const dL = (Number(i.opLbs) || 0) - (Number(i.sysLbs) || 0);
+    if (dQ !== 0 || Math.abs(dL) > 0.01) diffCount++;
   });
-  document.getElementById('dashTotalSelisih').innerText = countSelisih + ' Varian';
+  document.getElementById('dashTotalSelisih').innerText = diffCount + ' Varian';
 
   const catMap = {};
   currentItems.forEach(i => {
@@ -756,9 +806,9 @@ function renderDashboard() {
   Object.keys(catMap).forEach(k => {
     const d = catMap[k];
     const diff = d.opLbs - d.sysLbs;
-    let badgeStatus = '<span class="badge bg-success">Cocok</span>';
+    let badge = '<span class="badge bg-success">Cocok</span>';
     if (Math.abs(diff) > 0.01) {
-      badgeStatus = `<span class="badge bg-danger">Selisih ${diff > 0 ? '+' : ''}${diff.toFixed(1)} Lbs</span>`;
+      badge = `<span class="badge bg-danger">Selisih ${diff > 0 ? '+' : ''}${diff.toFixed(1)} Lbs</span>`;
     }
     catTbody.innerHTML += `
       <tr>
@@ -767,7 +817,7 @@ function renderDashboard() {
         <td class="text-end">${d.sysQty.toLocaleString('id-ID')}</td>
         <td class="text-end fw-bold">${d.sysLbs.toLocaleString('id-ID', {maximumFractionDigits: 2})} Lbs</td>
         <td class="text-end fw-bold">${d.opLbs.toLocaleString('id-ID', {maximumFractionDigits: 2})} Lbs</td>
-        <td class="text-center">${badgeStatus}</td>
+        <td class="text-center">${badge}</td>
       </tr>
     `;
   });
@@ -779,26 +829,24 @@ function renderLaporan() {
   tbody.innerHTML = '';
 
   let currentCat = '';
-  let subSysQty = 0, subSysLbs = 0, subOpQty = 0, subOpLbs = 0, subDiffQty = 0, subDiffLbs = 0;
-  let unitCat = '';
-  let catSubItems = [];
+  let sQ = 0, sL = 0, oQ = 0, oL = 0, dQ = 0, dL = 0, unitCat = '', catItems = [], rowNum = 1;
 
-  function flushSubtotal() {
-    if (catSubItems.length > 0) {
+  function flushSub() {
+    if (catItems.length > 0) {
       tbody.innerHTML += `
         <tr class="table-subtotal text-primary">
           <td colspan="2" class="text-center">Total ${currentCat}</td>
-          <td class="text-end">${subSysQty ? subSysQty.toLocaleString('id-ID') : '-'}</td>
+          <td class="text-end">${sQ ? sQ.toLocaleString('id-ID') : '-'}</td>
           <td class="text-center">${unitCat}</td>
-          <td class="text-end">${subSysLbs ? subSysLbs.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-'}</td>
+          <td class="text-end">${sL ? sL.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-'}</td>
           <td class="text-center">Lbs</td>
-          <td class="text-end">${subOpQty ? subOpQty.toLocaleString('id-ID') : '-'}</td>
+          <td class="text-end">${oQ ? oQ.toLocaleString('id-ID') : '-'}</td>
           <td class="text-center">${unitCat}</td>
-          <td class="text-end">${subOpLbs ? subOpLbs.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-'}</td>
+          <td class="text-end">${oL ? oL.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-'}</td>
           <td class="text-center">Lbs</td>
-          <td class="text-end ${subDiffQty > 0 ? 'diff-plus' : (subDiffQty < 0 ? 'diff-minus' : '')}">${subDiffQty !== 0 ? subDiffQty : '-'}</td>
+          <td class="text-end ${dQ > 0 ? 'diff-plus' : (dQ < 0 ? 'diff-minus' : '')}">${dQ !== 0 ? dQ : '-'}</td>
           <td class="text-center">${unitCat}</td>
-          <td class="text-end ${subDiffLbs > 0 ? 'diff-plus' : (subDiffLbs < 0 ? 'diff-minus' : '')}">${subDiffLbs !== 0 ? subDiffLbs.toFixed(1) : '-'}</td>
+          <td class="text-end ${dL > 0 ? 'diff-plus' : (dL < 0 ? 'diff-minus' : '')}">${dL !== 0 ? dL.toFixed(1) : '-'}</td>
           <td class="text-center">Lbs</td>
           <td></td>
         </tr>
@@ -806,27 +854,21 @@ function renderLaporan() {
     }
   }
 
-  let rowNum = 1;
-  currentItems.forEach((item) => {
+  currentItems.forEach(item => {
     if (item.kategori !== currentCat) {
-      flushSubtotal();
+      flushSub();
       currentCat = item.kategori;
-      subSysQty = 0; subSysLbs = 0; subOpQty = 0; subOpLbs = 0; subDiffQty = 0; subDiffLbs = 0;
-      unitCat = item.unit;
-      catSubItems = [];
-      rowNum = 1;
+      sQ = 0; sL = 0; oQ = 0; oL = 0; dQ = 0; dL = 0;
+      unitCat = item.unit; catItems = []; rowNum = 1;
     }
-
-    catSubItems.push(item);
+    catItems.push(item);
     const sq = Number(item.sysQty) || 0;
     const sl = Number(item.sysLbs) || 0;
     const oq = Number(item.opQty) || 0;
     const ol = Number(item.opLbs) || 0;
     const dq = oq - sq;
     const dl = ol - sl;
-
-    subSysQty += sq; subSysLbs += sl; subOpQty += oq; subOpLbs += ol;
-    subDiffQty += dq; subDiffLbs += dl;
+    sQ += sq; sL += sl; oQ += oq; oL += ol; dQ += dq; dL += dl;
 
     tbody.innerHTML += `
       <tr>
@@ -851,43 +893,10 @@ function renderLaporan() {
       </tr>
     `;
   });
-  flushSubtotal();
+  flushSub();
 }
 
-function toggleActionType() {
-  const isTambah = document.getElementById('actTambah').checked;
-  const badge = document.getElementById('actionModeBadge');
-  const title = document.getElementById('inputSectionTitle');
-  const lblQ = document.getElementById('lblInputQty');
-  const lblL = document.getElementById('lblInputLbs');
-  const btn = document.getElementById('btnSimpanUpdate');
-
-  if (isTambah) {
-    badge.className = 'badge bg-light text-success';
-    badge.innerText = 'Mode: Tambah Stok Masuk';
-    title.innerText = 'Tambahan Stok Masuk Baru';
-    lblQ.innerText = 'Tambah Qty (+)';
-    lblL.innerText = 'Tambah Berat Lbs (+)';
-    btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i> Tambahkan ke Stok';
-    document.getElementById('opnameRealQty').value = '';
-    document.getElementById('opnameRealLbs').value = '';
-  } else {
-    badge.className = 'badge bg-light text-primary';
-    badge.innerText = 'Mode: Opname Fisik';
-    title.innerText = 'Hitungan Fisik Riil';
-    lblQ.innerText = 'Jumlah Fisik (Qty)';
-    lblL.innerText = 'Berat Fisik (Lbs)';
-    btn.innerHTML = '<i class="bi bi-cloud-arrow-up me-1"></i> Simpan Hasil Opname';
-    
-    const idx = document.getElementById('opnameItemIndex').value;
-    if (idx !== '') {
-      const item = currentItems[idx];
-      document.getElementById('opnameRealQty').value = item.opQty !== undefined ? item.opQty : item.sysQty;
-      document.getElementById('opnameRealLbs').value = item.opLbs !== undefined ? item.opLbs : item.sysLbs;
-    }
-  }
-}
-
+// Scanner Logik
 const scanInput = document.getElementById('barcodeScannerInput');
 if (scanInput) {
   scanInput.addEventListener('keydown', function(e) {
@@ -900,49 +909,64 @@ if (scanInput) {
 
 function processBarcodeSearch(rawCode) {
   if (!rawCode) return;
-  const cleanCode = rawCode.trim();
+  const code = rawCode.trim().toLowerCase();
   const alertBox = document.getElementById('scanStatusAlert');
   alertBox.classList.remove('d-none');
 
-  const idx = currentItems.findIndex(i => i.barcode.trim().toLowerCase() === cleanCode.toLowerCase());
+  const idx = currentItems.findIndex(i => i.barcode.trim().toLowerCase() === code);
 
   if (idx !== -1) {
     const item = currentItems[idx];
     alertBox.className = "alert alert-success";
-    alertBox.innerHTML = `<i class="bi bi-check-circle-fill me-2 fs-5"></i> DITEMUKAN: <b>${item.kategori}</b> — ${item.size} (${item.barcode})`;
+    alertBox.innerHTML = `<i class="bi bi-check-circle-fill me-2 fs-5"></i> DITEMUKAN: <b>${item.kategori}</b> (${item.size})`;
     
     document.getElementById('opnameItemIndex').value = idx;
-    document.getElementById('opnameNamaDisplay').value = `${item.kategori} - ${item.size} [${item.barcode}]`;
+    document.getElementById('opnameNamaDisplay').value = item.kategori + " - " + item.size + " [" + item.barcode + "]";
     document.getElementById('opnameKodeProduksi').value = item.kodeProduksi || '';
     document.getElementById('opnameKeterangan').value = item.ket || '';
     document.getElementById('opnameSysQty').value = item.sysQty;
     document.getElementById('opnameSysLbs').value = item.sysLbs;
 
-    toggleActionType();
-    document.getElementById('opnameRealQty').focus();
+    toggleAction();
+    document.getElementById('opnameValQty').focus();
   } else {
     alertBox.className = "alert alert-danger";
-    alertBox.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i> Barcode <b>"${cleanCode}"</b> tidak terdaftar!`;
+    alertBox.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i> Barcode <b>"${rawCode}"</b> tidak terdaftar!`;
   }
   if (scanInput) scanInput.value = '';
 }
 
-let html5QrCode = null;
-function initCamera() {
-  if (html5QrCode && html5QrCode.isScanning) return;
-  html5QrCode = new Html5Qrcode("reader");
-  html5QrCode.start(
-    { facingMode: "environment" },
-    { fps: 15, qrbox: { width: 280, height: 160 } },
-    (decodedText) => processBarcodeSearch(decodedText)
-  ).catch(err => {
-    document.getElementById('reader').innerHTML = '<div class="alert alert-warning small p-2">Kamera tidak aktif atau izin browser ditolak.</div>';
-  });
-}
+function toggleAction() {
+  const isTambah = document.getElementById('actTambah').checked;
+  const badge = document.getElementById('actionModeBadge');
+  const title = document.getElementById('boxTitleInput');
+  const lblQ = document.getElementById('lblInputQty');
+  const lblL = document.getElementById('lblInputLbs');
+  const btn = document.getElementById('btnSubmitForm');
 
-function stopCamera() {
-  if (html5QrCode && html5QrCode.isScanning) {
-    html5QrCode.stop().then(() => document.getElementById('reader').innerHTML = '');
+  if (isTambah) {
+    badge.className = 'badge bg-light text-success';
+    badge.innerText = 'Mode: Tambah Stok Masuk';
+    title.innerText = 'Tambahan Stok Masuk Baru';
+    lblQ.innerText = 'Jumlah Tambahan (Qty)';
+    lblL.innerText = 'Berat Tambahan (Lbs)';
+    btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i> Tambahkan ke Stok';
+    document.getElementById('opnameValQty').value = '';
+    document.getElementById('opnameValLbs').value = '';
+  } else {
+    badge.className = 'badge bg-light text-primary';
+    badge.innerText = 'Mode: Opname Fisik';
+    title.innerText = 'Hasil Hitungan Fisik Riil';
+    lblQ.innerText = 'Jumlah Fisik Riil (Qty)';
+    lblL.innerText = 'Berat Fisik Riil (Lbs)';
+    btn.innerHTML = '<i class="bi bi-save me-1"></i> Simpan Hasil Opname';
+
+    const idx = document.getElementById('opnameItemIndex').value;
+    if (idx !== '') {
+      const item = currentItems[idx];
+      document.getElementById('opnameValQty').value = item.opQty !== undefined ? item.opQty : item.sysQty;
+      document.getElementById('opnameValLbs').value = item.opLbs !== undefined ? item.opLbs : item.sysLbs;
+    }
   }
 }
 
@@ -950,39 +974,38 @@ document.getElementById('formOpnameUpdate').addEventListener('submit', function(
   e.preventDefault();
   const idx = document.getElementById('opnameItemIndex').value;
   if (idx === '' || idx === undefined) {
-    alert('Silakan scan barcode terlebih dahulu!');
+    alert("Silakan scan barcode atau pilih barang terlebih dahulu!");
     return;
   }
 
   const isTambah = document.getElementById('actTambah').checked;
-  const valQty = Number(document.getElementById('opnameRealQty').value);
-  const valLbs = Number(document.getElementById('opnameRealLbs').value);
-  const kodeProduksi = document.getElementById('opnameKodeProduksi').value;
+  const vQ = Number(document.getElementById('opnameValQty').value) || 0;
+  const vL = Number(document.getElementById('opnameValLbs').value) || 0;
+  const kPrd = document.getElementById('opnameKodeProduksi').value;
   const ket = document.getElementById('opnameKeterangan').value;
 
   const item = currentItems[idx];
 
   if (isTambah) {
-    item.sysQty = (Number(item.sysQty) || 0) + valQty;
-    item.sysLbs = (Number(item.sysLbs) || 0) + valLbs;
+    item.sysQty = (Number(item.sysQty) || 0) + vQ;
+    item.sysLbs = (Number(item.sysLbs) || 0) + vL;
     item.opQty = item.sysQty;
     item.opLbs = item.sysLbs;
-    alert(`Berhasil menambahkan +${valQty} ${item.unit} (+${valLbs} Lbs) ke stok!`);
+    alert("Berhasil menambahkan +" + vQ + " " + item.unit + " (+" + vL + " Lbs) ke stok!");
   } else {
-    item.opQty = valQty;
-    item.opLbs = valLbs;
-    alert(`Hasil opname fisik berhasil disimpan!`);
+    item.opQty = vQ;
+    item.opLbs = vL;
+    alert("Hasil fisik opname berhasil disimpan!");
   }
 
-  item.kodeProduksi = kodeProduksi;
+  item.kodeProduksi = kPrd;
   item.ket = ket;
 
-  allSessions[currentSessionKey].items = currentItems;
-  persistSession(currentSessionKey, allSessions[currentSessionKey]);
-  resetOpnameForm();
+  saveCurrentData();
+  resetForm();
 });
 
-function resetOpnameForm() {
+function resetForm() {
   document.getElementById('formOpnameUpdate').reset();
   document.getElementById('opnameItemIndex').value = '';
   document.getElementById('opnameNamaDisplay').value = '';
@@ -997,38 +1020,55 @@ document.getElementById('formTambahProdukBaru').addEventListener('submit', funct
     size: document.getElementById('newSize').value.trim(),
     kodeProduksi: document.getElementById('newKodeProduksi').value.trim(),
     unit: document.getElementById('newUnit').value,
-    sysQty: Number(document.getElementById('newQty').value),
-    sysLbs: Number(document.getElementById('newLbs').value),
-    opQty: Number(document.getElementById('newQty').value),
-    opLbs: Number(document.getElementById('newLbs').value),
+    sysQty: Number(document.getElementById('newQty').value) || 0,
+    sysLbs: Number(document.getElementById('newLbs').value) || 0,
+    opQty: Number(document.getElementById('newQty').value) || 0,
+    opLbs: Number(document.getElementById('newLbs').value) || 0,
     ket: document.getElementById('newKeterangan').value.trim()
   };
 
   if (currentItems.some(i => i.barcode.toLowerCase() === newItem.barcode.toLowerCase())) {
-    alert('Barcode ini sudah terdaftar! Gunakan barcode unik.');
+    alert("Barcode ini sudah ada! Gunakan barcode unik.");
     return;
   }
 
   currentItems.push(newItem);
-  allSessions[currentSessionKey].items = currentItems;
-  persistSession(currentSessionKey, allSessions[currentSessionKey]);
-
-  alert('Produk baru berhasil ditambahkan!');
+  saveCurrentData();
+  alert("Produk baru berhasil ditambahkan!");
   this.reset();
   bootstrap.Modal.getInstance(document.getElementById('modalTambahProduk')).hide();
 });
 
+let html5QrCode = null;
+function initCamera() {
+  if (html5QrCode && html5QrCode.isScanning) return;
+  html5QrCode = new Html5Qrcode("reader");
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 15, qrbox: { width: 260, height: 150 } },
+    (decodedText) => processBarcodeSearch(decodedText)
+  ).catch(() => {
+    document.getElementById('reader').innerHTML = '<div class="alert alert-warning small p-2">Kamera tidak aktif atau izin ditolak.</div>';
+  });
+}
+
+function stopCamera() {
+  if (html5QrCode && html5QrCode.isScanning) {
+    html5QrCode.stop().then(() => document.getElementById('reader').innerHTML = '');
+  }
+}
+
 function showBarcodeModal(idx) {
   const item = currentItems[idx];
   document.getElementById('lblNama').innerText = item.kategori;
-  document.getElementById('lblSize').innerText = `Varian: ${item.size} | Unit: ${item.unit}`;
-  document.getElementById('lblKode').innerText = `BATCH: ${item.kodeProduksi || '-'}`;
+  document.getElementById('lblSize').innerText = "Varian: " + item.size + " | Satuan: " + item.unit;
+  document.getElementById('lblKode').innerText = "BATCH: " + (item.kodeProduksi || '-');
 
   JsBarcode("#barcodeSvg", item.barcode, {
     format: "CODE128",
     lineColor: "#000",
     width: 2.2,
-    height: 65,
+    height: 60,
     displayValue: true,
     fontSize: 16
   });
@@ -1047,76 +1087,61 @@ function printBarcodeLabel() {
 
 function exportToExcel() {
   try {
-    const sess = allSessions[currentSessionKey] || {};
-    const docNo = sess.docNomor || currentDocNomor;
-    const docDate = sess.tanggal || currentSessionKey;
-    const exportData = currentItems.length ? currentItems : defaultItemsTemplate;
-
+    const docNo = document.getElementById('docNomor').value;
     const aoa = [
       ["No : " + docNo],
-      ["Date : " + docDate],
+      ["Date : " + currentDate],
       [],
       ["BERITA ACARA STOK OPNAME COLD STORAGE"],
       [],
-      [`Pada hari ini, ${docDate}, bertempat di PT. Lampung Bay Seafood dengan alamat Jl. Raya Tanjung Bintang No. 101 Desa Serdang, Kec. Tanjung Bintang- Lampung Selatan. Telah dilakukan stok opname Cold Storage, berdasarkan opname yang dilakukan terdiri dari :`],
+      [`Pada hari ini, ${currentDate}, bertempat di PT. Lampung Bay Seafood dengan alamat Jl. Raya Tanjung Bintang No. 101 Desa Serdang, Kec. Tanjung Bintang- Lampung Selatan. Telah dilakukan stok opname Cold Storage, berdasarkan opname yang dilakukan terdiri dari :`],
       [],
       ["NO", "NAMA BARANG", "SIZE", "STOCK QTY", "UNIT", "STOCK LBS", "UNIT", "OPNAME QTY", "UNIT", "OPNAME LBS", "UNIT", "SELISIH QTY", "UNIT", "SELISIH LBS", "UNIT", "KODE PRODUKSI", "KETERANGAN"]
     ];
 
     let currentCat = '';
-    let sqTotal = 0, slTotal = 0, oqTotal = 0, olTotal = 0, unitCat = 'Mc', rowNum = 1;
+    let sQ = 0, sL = 0, oQ = 0, oL = 0, unitCat = 'Mc', rowNum = 1;
 
-    function flushExcelSub() {
+    function flushExSub() {
       if (currentCat) {
-        const dq = oqTotal - sqTotal;
-        const dl = olTotal - slTotal;
-        aoa.push(["", `Total ${currentCat}`, "", sqTotal||"-", unitCat, slTotal||"-", "Lbs", oqTotal||"-", unitCat, olTotal||"-", "Lbs", dq!==0?dq:"-", unitCat, dl!==0?dl:"-", "Lbs", "", ""]);
+        aoa.push(["", `Total ${currentCat}`, "", sQ||"-", unitCat, sL||"-", "Lbs", oQ||"-", unitCat, oL||"-", "Lbs", (oQ-sQ)!==0?(oQ-sQ):"-", unitCat, (oL-sL)!==0?(oL-sL):"-", "Lbs", "", ""]);
       }
     }
 
-    exportData.forEach(item => {
+    currentItems.forEach(item => {
       if (item.kategori !== currentCat) {
-        flushExcelSub();
+        flushExSub();
         currentCat = item.kategori;
-        sqTotal = 0; slTotal = 0; oqTotal = 0; olTotal = 0;
-        unitCat = item.unit; rowNum = 1;
+        sQ = 0; sL = 0; oQ = 0; oL = 0; unitCat = item.unit; rowNum = 1;
       }
       const sq = Number(item.sysQty) || 0;
       const sl = Number(item.sysLbs) || 0;
       const oq = Number(item.opQty) || 0;
       const ol = Number(item.opLbs) || 0;
-      sqTotal += sq; slTotal += sl; oqTotal += oq; olTotal += ol;
+      sQ += sq; sL += sl; oQ += oq; oL += ol;
 
       aoa.push([rowNum++, item.kategori, item.size, sq||"-", item.unit, sl||"-", "Lbs", oq||"-", item.unit, ol||"-", "Lbs", (oq-sq)!==0?(oq-sq):"-", item.unit, (ol-sl)!==0?(ol-sl):"-", "Lbs", item.kodeProduksi||"-", item.ket||""]);
     });
-    flushExcelSub();
+    flushExSub();
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Stok Opname");
-    XLSX.writeFile(wb, `Berita_Acara_Opname_${currentSessionKey}.xlsx`);
-  } catch(err) {
-    alert("Gagal mengunduh Excel: " + err.message);
+    XLSX.writeFile(wb, `Berita_Acara_Opname_${currentDate}.xlsx`);
+  } catch(e) {
+    alert("Gagal download Excel: " + e.message);
   }
 }
 
 function exportToPDF() {
   try {
     const jsPDFClass = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
-    if (!jsPDFClass) {
-      alert("Pustaka PDF sedang dimuat, coba sesaat lagi.");
-      return;
-    }
-
     const doc = new jsPDFClass('l', 'pt', 'a4');
-    const sess = allSessions[currentSessionKey] || {};
-    const docNo = sess.docNomor || currentDocNomor;
-    const docDate = sess.tanggal || currentSessionKey;
-    const exportData = currentItems.length ? currentItems : defaultItemsTemplate;
+    const docNo = document.getElementById('docNomor').value;
 
     doc.setFontSize(9);
     doc.text(`No   : ${docNo}`, 40, 30);
-    doc.text(`Date : ${docDate}`, 40, 42);
+    doc.text(`Date : ${currentDate}`, 40, 42);
 
     doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
@@ -1124,40 +1149,38 @@ function exportToPDF() {
 
     doc.setFontSize(8.5);
     doc.setFont("helvetica", "normal");
-    const introText = `Pada hari ini, ${docDate}, bertempat di PT. Lampung Bay Seafood dengan alamat Jl. Raya Tanjung Bintang No. 101 Desa Serdang, Kec. Tanjung Bintang- Lampung Selatan. Telah dilakukan stok opname Cold Storage, berdasarkan opname yang dilakukan terdiri dari :`;
-    const splitIntro = doc.splitTextToSize(introText, doc.internal.pageSize.getWidth() - 80);
-    doc.text(splitIntro, 40, 80);
+    const intro = `Pada hari ini, ${currentDate}, bertempat di PT. Lampung Bay Seafood dengan alamat Jl. Raya Tanjung Bintang No. 101 Desa Serdang, Kec. Tanjung Bintang- Lampung Selatan. Telah dilakukan stok opname Cold Storage, berdasarkan opname yang dilakukan terdiri dari :`;
+    doc.text(doc.splitTextToSize(intro, doc.internal.pageSize.getWidth() - 80), 40, 80);
 
     const tableRows = [];
-    let currentCat = '', sqTotal = 0, slTotal = 0, oqTotal = 0, olTotal = 0, dqTotal = 0, dlTotal = 0, unitCat = 'Mc', rowNum = 1;
+    let currentCat = '', sQ = 0, sL = 0, oQ = 0, oL = 0, dQ = 0, dL = 0, unitCat = 'Mc', rowNum = 1;
 
     function flushPdfSub() {
       if (currentCat) {
         tableRows.push([
           { content: `Total ${currentCat}`, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [240, 245, 255] } },
-          { content: sqTotal ? sqTotal.toLocaleString('id-ID') : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: sQ ? sQ.toLocaleString('id-ID') : '-', styles: { fontStyle: 'bold', halign: 'right' } },
           { content: unitCat, styles: { fontStyle: 'bold', halign: 'center' } },
-          { content: slTotal ? slTotal.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: sL ? sL.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
           { content: "Lbs", styles: { fontStyle: 'bold', halign: 'center' } },
-          { content: oqTotal ? oqTotal.toLocaleString('id-ID') : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: oQ ? oQ.toLocaleString('id-ID') : '-', styles: { fontStyle: 'bold', halign: 'right' } },
           { content: unitCat, styles: { fontStyle: 'bold', halign: 'center' } },
-          { content: olTotal ? olTotal.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: oL ? oL.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
           { content: "Lbs", styles: { fontStyle: 'bold', halign: 'center' } },
-          { content: dqTotal !== 0 ? dqTotal.toString() : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: dQ !== 0 ? dQ.toString() : '-', styles: { fontStyle: 'bold', halign: 'right' } },
           { content: unitCat, styles: { fontStyle: 'bold', halign: 'center' } },
-          { content: dlTotal !== 0 ? dlTotal.toFixed(1) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: dL !== 0 ? dL.toFixed(1) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
           { content: "Lbs", styles: { fontStyle: 'bold', halign: 'center' } },
           { content: "", styles: { fontStyle: 'bold' } }
         ]);
       }
     }
 
-    exportData.forEach(item => {
+    currentItems.forEach(item => {
       if (item.kategori !== currentCat) {
         flushPdfSub();
         currentCat = item.kategori;
-        sqTotal = 0; slTotal = 0; oqTotal = 0; olTotal = 0; dqTotal = 0; dlTotal = 0;
-        unitCat = item.unit; rowNum = 1;
+        sQ = 0; sL = 0; oQ = 0; oL = 0; dQ = 0; dL = 0; unitCat = item.unit; rowNum = 1;
       }
       const sq = Number(item.sysQty) || 0;
       const sl = Number(item.sysLbs) || 0;
@@ -1165,7 +1188,7 @@ function exportToPDF() {
       const ol = Number(item.opLbs) || 0;
       const dq = oq - sq;
       const dl = ol - sl;
-      sqTotal += sq; slTotal += sl; oqTotal += oq; olTotal += ol; dqTotal += dq; dlTotal += dl;
+      sQ += sq; sL += sl; oQ += oq; oL += ol; dQ += dq; dL += dl;
 
       tableRows.push([
         { content: rowNum++.toString(), styles: { halign: 'center' } },
@@ -1207,14 +1230,14 @@ function exportToPDF() {
       body: tableRows
     });
 
-    doc.save(`Berita_Acara_Opname_${currentSessionKey}.pdf`);
-  } catch(err) {
-    alert("Gagal mengunduh PDF: " + err.message);
+    doc.save(`Berita_Acara_Opname_${currentDate}.pdf`);
+  } catch(e) {
+    alert("Gagal download PDF: " + e.message);
   }
 }
 
-// Jalankan otomatis
-initApp();
+// Inisialisasi Otomatis
+window.onload = initApp;
 </script>
 
 </body>
