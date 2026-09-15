@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PT LAMPUNG BAY SEAFOOD - Sistem Inventory Cold Storage</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  
+  <!-- SheetJS (xlsx) for Excel Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- jsPDF & autoTable for PDF Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <!-- JsBarcode for generating barcode images/labels -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <!-- HTML5-QRCode for Live Camera Scanning (HP & Laptop) -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .navbar-brand { font-weight: 700; letter-spacing: 0.5px; }
+    .card-metric { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    .badge-code { font-family: monospace; font-size: 0.9em; background: #e2e8f0; color: #1e293b; padding: 4px 8px; border-radius: 4px; }
+    .table-sm th, .table-sm td { font-size: 0.86rem; vertical-align: middle; }
+    .nav-pills .nav-link.active { background-color: #0d6efd; box-shadow: 0 4px 8px rgba(13,110,253,0.3); }
+    .table-subtotal { background-color: #f8fafc; font-weight: bold; }
+    .diff-plus { color: #198754; font-weight: bold; }
+    .diff-minus { color: #dc3545; font-weight: bold; }
+    #reader { width: 100%; max-width: 450px; margin: 0 auto; border-radius: 8px; overflow: hidden; }
+    .scanner-active-box { border: 2px dashed #0d6efd; background-color: #eff6ff; padding: 15px; border-radius: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-dark bg-dark px-3 shadow-sm border-bottom border-primary border-3">
+  <div class="container-fluid">
+    <span class="navbar-brand mb-0 h1 d-flex align-items-center">
+      <i class="bi bi-water me-2 text-info fs-4"></i>
+      PT LAMPUNG BAY SEAFOOD
+    </span>
+    <div class="text-light d-flex align-items-center gap-3">
+      <small class="d-none d-md-inline text-secondary">Jl. Raya Tanjung Bintang No. 101, Lampung Selatan</small>
+      <span class="badge bg-primary px-3 py-2"><i class="bi bi-shield-check me-1"></i> Admin Cold Storage</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid py-4 px-md-4">
+
+  <!-- Nav Tabs & Action Toolbar -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <ul class="nav nav-pills" id="mainTab" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#dashboard"><i class="bi bi-speedometer2 me-1"></i> Dashboard</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#opnameTab"><i class="bi bi-upc-scan me-1 text-warning"></i> Scan Barcode & Opname</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#inventoryTab"><i class="bi bi-boxes me-1"></i> Master Stok & Label Barcode</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#laporanTab"><i class="bi bi-file-earmark-spreadsheet me-1"></i> Berita Acara & Unduh</button>
+      </li>
+    </ul>
+
+    <!-- Quick Export Actions -->
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-success shadow-sm btn-sm" onclick="exportToExcel()">
+        <i class="bi bi-file-earmark-excel me-1"></i> Download Excel
+      </button>
+      <button class="btn btn-outline-danger shadow-sm btn-sm" onclick="exportToPDF()">
+        <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="tab-content">
+    
+    <!-- TAB 1: DASHBOARD -->
+    <div class="tab-pane fade show active" id="dashboard">
+      <div class="row g-3 mb-4">
+        <div class="col-md-3">
+          <div class="card card-metric bg-white p-3 border-start border-primary border-4">
+            <h6 class="text-muted small mb-1">TOTAL PRODUK / SIZE</h6>
+            <h3 id="dashTotalItem" class="fw-bold mb-0 text-primary">0</h3>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card card-metric bg-white p-3 border-start border-success border-4">
+            <h6 class="text-muted small mb-1">TOTAL QTY (MC / BAG)</h6>
+            <h3 id="dashTotalQty" class="fw-bold mb-0 text-success">0</h3>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card card-metric bg-white p-3 border-start border-info border-4">
+            <h6 class="text-muted small mb-1">TOTAL BERAT (LBS)</h6>
+            <h3 id="dashTotalLbs" class="fw-bold mb-0 text-info">0 Lbs</h3>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card card-metric bg-white p-3 border-start border-danger border-4">
+            <h6 class="text-muted small mb-1">ITEM ADA SELISIH OPNAME</h6>
+            <h3 id="dashTotalSelisih" class="fw-bold text-danger mb-0">0</h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Summary Card -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 fw-bold d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-snow2 text-primary me-2"></i>Status Inventory Berdasarkan Kategori</span>
+          <span class="badge bg-light text-dark">Updated: <span id="currentDateDisplay"></span></span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Kategori Produk</th>
+                  <th class="text-center">Jumlah Varian</th>
+                  <th class="text-end">Stok Sistem (Qty)</th>
+                  <th class="text-end">Stok Sistem (Lbs)</th>
+                  <th class="text-end">Hasil Opname (Lbs)</th>
+                  <th class="text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody id="categorySummaryBody">
+                <!-- Diisi otomatis -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: SCAN BARCODE & OPNAME (Ditingkatkan dengan Kamera + Auto Listen Scanner) -->
+    <div class="tab-pane fade" id="opnameTab">
+      <div class="row g-4">
+        <div class="col-lg-5">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
+              <span><i class="bi bi-upc-scan me-2"></i>Area Scan Barcode</span>
+              <span class="badge bg-light text-primary"><i class="bi bi-broadcast"></i> Auto-Detect Scanner Siap</span>
+            </div>
+            <div class="card-body">
+              
+              <!-- Pilihan Mode Scan -->
+              <ul class="nav nav-tabs mb-3" id="scanMethodTab" role="tablist">
+                <li class="nav-item">
+                  <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#manualScannerTab">
+                    <i class="bi bi-upc"></i> Scanner Tembak / Input
+                  </button>
+                </li>
+                <li class="nav-item">
+                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#cameraScannerTab" onclick="initCamera()">
+                    <i class="bi bi-camera"></i> Scan Kamera HP/Laptop
+                  </button>
+                </li>
+              </ul>
+
+              <div class="tab-content">
+                <!-- Mode 1: Scanner Tembak / Input Cepat -->
+                <div class="tab-pane fade show active" id="manualScannerTab">
+                  <div class="scanner-active-box mb-3">
+                    <label class="form-label fw-bold text-primary mb-1">Tembak Scanner Barcode (USB/Bluetooth):</label>
+                    <p class="small text-muted mb-2">Scanner fisik langsung mendeteksi barcode otomatis kapan saja.</p>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="bi bi-upc text-primary fs-5"></i></span>
+                      <input type="text" id="barcodeScannerInput" class="form-control form-control-lg fw-bold" placeholder="Scan barcode disini..." autofocus>
+                      <button class="btn btn-primary px-3" onclick="processBarcodeSearch(document.getElementById('barcodeScannerInput').value)">
+                        <i class="bi bi-search"></i> Cari
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Mode 2: Kamera HP Langsung -->
+                <div class="tab-pane fade" id="cameraScannerTab">
+                  <div class="text-center mb-3">
+                    <div id="reader"></div>
+                    <small class="text-muted d-block mt-2">Arahkan kamera ke barcode produk (Code128, EAN, QR Code)</small>
+                    <div class="mt-2">
+                      <button class="btn btn-sm btn-outline-danger" onclick="stopCamera()"><i class="bi bi-camera-video-off"></i> Matikan Kamera</button>
+                      <button class="btn btn-sm btn-outline-primary" onclick="initCamera()"><i class="bi bi-arrow-clockwise"></i> Refresh Kamera</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Hasil Scan Alert -->
+              <div id="scanStatusAlert" class="alert alert-info d-none mb-3"></div>
+
+              <!-- Shortcut Klik Cepat -->
+              <div class="p-3 bg-light rounded border">
+                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Uji Coba Cepat (Klik untuk tes):</h6>
+                <div class="d-flex flex-wrap gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('SLP-01')">SLP-01</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('GRP-04')">GRP-04</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('OCT-LEG')">OCT-LEG</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('OCT-MED')">OCT-MED</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('OCT-TM')">OCT-TM</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('OCT-SV-01')">OCT-SV-01</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-7">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-success text-white fw-bold">
+              <i class="bi bi-pencil-square me-2"></i>Form Input Hasil Opname & Edit Data
+            </div>
+            <div class="card-body">
+              <form id="formOpnameUpdate">
+                <input type="hidden" id="opnameItemIndex">
+                <div class="mb-3">
+                  <label class="form-label fw-bold">Nama Barang Terdeteksi</label>
+                  <input type="text" id="opnameNamaDisplay" class="form-control form-control-lg bg-light fw-bold text-primary" readonly placeholder="Scan barcode untuk memuat barang...">
+                </div>
+
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">Kode Produksi / Batch</label>
+                    <input type="text" id="opnameKodeProduksi" class="form-control" placeholder="Contoh: PRD-2026-09">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Keterangan Tambahan</label>
+                    <input type="text" id="opnameKeterangan" class="form-control" placeholder="Contoh: Barang di Lbs Jakarta">
+                  </div>
+                </div>
+
+                <div class="row p-3 bg-light rounded border mx-0 mb-3">
+                  <div class="col-md-6 border-end">
+                    <h6 class="text-primary fw-bold mb-2"><i class="bi bi-database"></i> Stok Sistem (Awal)</h6>
+                    <div class="mb-2">
+                      <label class="small text-muted">Stok Sistem (Qty)</label>
+                      <input type="number" id="opnameSysQty" class="form-control" readonly>
+                    </div>
+                    <div>
+                      <label class="small text-muted">Berat Sistem (Lbs)</label>
+                      <input type="number" step="any" id="opnameSysLbs" class="form-control" readonly>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <h6 class="text-success fw-bold mb-2"><i class="bi bi-check2-circle"></i> Hitungan Opname Aktual</h6>
+                    <div class="mb-2">
+                      <label class="small text-muted fw-bold">Hitungan Fisik (Qty/Box/Bag)</label>
+                      <input type="number" id="opnameRealQty" class="form-control border-success fw-bold text-success" placeholder="Masukkan hitungan fisik" required>
+                    </div>
+                    <div>
+                      <label class="small text-muted fw-bold">Hitungan Berat Fisik (Lbs)</label>
+                      <input type="number" step="any" id="opnameRealLbs" class="form-control border-success fw-bold text-success" placeholder="Masukkan berat riil" required>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                  <button type="button" class="btn btn-secondary" onclick="resetOpnameForm()">Reset</button>
+                  <button type="submit" class="btn btn-success px-4"><i class="bi bi-save me-1"></i> Simpan Hasil Opname</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: MASTER STOK & LABEL BARCODE -->
+    <div class="tab-pane fade" id="inventoryTab">
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div>
+              <h5 class="card-title fw-bold mb-0">Data Stok & Barcode Master</h5>
+              <small class="text-muted">Klik ikon barcode untuk melihat & mencetak label barcode per item</small>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalTambahProduk">
+                <i class="bi bi-plus-circle me-1"></i> Tambah Produk / Size Baru
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle table-sm">
+              <thead class="table-dark">
+                <tr>
+                  <th style="width: 45px;" class="text-center">No</th>
+                  <th>Barcode</th>
+                  <th>Nama Barang & Size</th>
+                  <th>Unit</th>
+                  <th>Kode Produksi</th>
+                  <th class="text-end" style="width: 110px;">Stok Qty</th>
+                  <th class="text-end" style="width: 120px;">Berat (Lbs)</th>
+                  <th>Keterangan</th>
+                  <th class="text-center" style="width: 110px;">Aksi / Label</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryTableBody">
+                <!-- Diisi via script -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: BERITA ACARA & UNDUH LAPORAN -->
+    <div class="tab-pane fade" id="laporanTab">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <h5 class="fw-bold mb-1 text-primary">BERITA ACARA STOK OPNAME COLD STORAGE</h5>
+              <div class="small text-muted">PT. Lampung Bay Seafood — Jl. Raya Tanjung Bintang No. 101 Desa Serdang, Kec. Tanjung Bintang</div>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-success btn-sm" onclick="exportToExcel()">
+                <i class="bi bi-file-earmark-excel me-1"></i> Unduh Excel (.xlsx)
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="exportToPDF()">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Unduh PDF Resmi (.pdf)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="row g-2 mb-3 bg-light p-3 rounded">
+            <div class="col-md-4">
+              <label class="small fw-bold">Nomor Berita Acara:</label>
+              <input type="text" id="docNomor" class="form-control form-control-sm" value="008/KEU/OPNAME/LBS/AGUST/2026">
+            </div>
+            <div class="col-md-4">
+              <label class="small fw-bold">Tanggal Opname:</label>
+              <input type="text" id="docTanggal" class="form-control form-control-sm" value="Senin, 31 Agustus 2026">
+            </div>
+            <div class="col-md-4">
+              <label class="small fw-bold">Lokasi:</label>
+              <input type="text" id="docLokasi" class="form-control form-control-sm" value="Cold Storage PT. Lampung Bay Seafood">
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle table-sm" id="tablePreviewLaporan">
+              <thead class="table-primary text-center align-middle" style="font-size: 0.8rem;">
+                <tr>
+                  <th rowspan="2" style="width: 40px;">NO</th>
+                  <th rowspan="2">NAMA BARANG</th>
+                  <th colspan="4">STOCK INVENTORY (SISTEM)</th>
+                  <th colspan="4">OPNAME (FISIK)</th>
+                  <th colspan="4">SELISIH</th>
+                  <th rowspan="2">KETERANGAN</th>
+                </tr>
+                <tr>
+                  <th>QTY</th>
+                  <th>UNIT</th>
+                  <th>LBS</th>
+                  <th>UNIT</th>
+                  <th>QTY</th>
+                  <th>UNIT</th>
+                  <th>LBS</th>
+                  <th>UNIT</th>
+                  <th>QTY</th>
+                  <th>UNIT</th>
+                  <th>LBS</th>
+                  <th>UNIT</th>
+                </tr>
+              </thead>
+              <tbody id="previewLaporanBody" style="font-size: 0.85rem;">
+                <!-- Diisi via renderLaporan() -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL LIHAT & CETAK BARCODE LABEL -->
+<div class="modal fade" id="modalBarcodeLabel" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title"><i class="bi bi-upc me-2"></i>Label Barcode Produk</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4" id="printableBarcodeArea">
+        <h5 id="lblNama" class="fw-bold mb-1 text-primary">Nama Produk</h5>
+        <div id="lblSize" class="text-muted mb-2">Size / Varian</div>
+        <div class="my-3 d-flex justify-content-center">
+          <svg id="barcodeSvg"></svg>
+        </div>
+        <div class="badge bg-secondary mb-2" id="lblKode">BATCH: -</div>
+        <p class="small text-muted mb-0">PT. Lampung Bay Seafood</p>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+        <button type="button" class="btn btn-primary" onclick="printBarcodeLabel()"><i class="bi bi-printer me-1"></i> Cetak Label</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TAMBAH PRODUK BARU -->
+<div class="modal fade" id="modalTambahProduk" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="formTambahProdukBaru">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Tambah Produk / Item Baru</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">Kategori Produk</label>
+              <input type="text" list="kategoriList" id="newCategory" class="form-control" placeholder="Pilih atau ketik kategori baru" required>
+              <datalist id="kategoriList">
+                <option value="FORZEN SLIPER MEAT">
+                <option value="FROZEN FARMER GROUPER SKIN LESS">
+                <option value="FROZEN WILD CAUGT GROUPER SKIN LESS">
+                <option value="SNAPPER FLT S/ON CO IVP">
+                <option value="RED SNAPPER FLT S/ON CO IVP">
+                <option value="FROZEN OCTOPUS CUT USA">
+                <option value="FROZEN OCTOPUS BALL TYPE USA">
+                <option value="FROZEN OCTOPUS CUT KOREA">
+                <option value="FROZEN OCTOPUS SLICE TENTACLE">
+                <option value="FROZEN COOKED OCTOPUS LEG">
+                <option value="FROZEN COOKED OCTOPUS MEDALLION">
+                <option value="FROZEN OCTOPUS SV DSI">
+                <option value="FROZEN OCTOPUS SV DSI TM">
+                <option value="FROZEN OCTOPUS SV TM UNDERSIZE">
+                <option value="FROZEN OCTOPUS SV GOOD UNDERSIZE">
+                <option value="FROZEN CRABMEAT- CCF">
+              </datalist>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">Spesifikasi Size / Varian</label>
+              <input type="text" id="newSize" class="form-control" placeholder="Contoh: Size U-2 Oz, 4-6 oz, 1-3 lbs, 14-16 pc" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label fw-bold">Barcode / SKU</label>
+              <input type="text" id="newBarcode" class="form-control" placeholder="Scan barcode produk" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label fw-bold">Kode Produksi</label>
+              <input type="text" id="newKodeProduksi" class="form-control" placeholder="Contoh: PRD-2026-09" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label fw-bold">Satuan Kemasan (Unit)</label>
+              <select id="newUnit" class="form-select">
+                <option value="Mc">Mc (Master Carton)</option>
+                <option value="Bag">Bag</option>
+                <option value="Box">Box</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">Stok Masuk Awal (Qty)</label>
+              <input type="number" id="newQty" class="form-control" value="0" min="0" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">Berat Total (Lbs)</label>
+              <input type="number" step="any" id="newLbs" class="form-control" value="0" min="0" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Keterangan (Opsional)</label>
+            <input type="text" id="newKeterangan" class="form-control" placeholder="Contoh: Simpan di Cold Room 2">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i> Tambahkan ke Inventory</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// Data Master Produk Persis Sesuai Berita Acara Cold Storage LBS
+const defaultItems = [
+  // 1. FORZEN SLIPER MEAT
+  { barcode: "SLP-01", kategori: "FORZEN SLIPER MEAT", size: "Size U-2 Oz", kodeProduksi: "PRD-SLP-01", unit: "Bag", sysQty: 1638, sysLbs: 8190, opQty: 1638, opLbs: 8190, ket: "" },
+  
+  // 2. FROZEN FARMER GROUPER SKIN LESS
+  { barcode: "GRP-01", kategori: "FROZEN FARMER GROUPER SKIN LESS", size: "4-6 oz", kodeProduksi: "PRD-GRP-01", unit: "Mc", sysQty: 0, sysLbs: 0, opQty: 0, opLbs: 0, ket: "" },
+  { barcode: "GRP-02", kategori: "FROZEN FARMER GROUPER SKIN LESS", size: "6-8 oz", kodeProduksi: "PRD-GRP-02", unit: "Mc", sysQty: 0, sysLbs: 0, opQty: 0, opLbs: 0, ket: "" },
+  { barcode: "GRP-03", kategori: "FROZEN FARMER GROUPER SKIN LESS", size: "8-10 oz", kodeProduksi: "PRD-GRP-03", unit: "Mc", sysQty: 0, sysLbs: 0, opQty: 0, opLbs: 0, ket: "" },
+  { barcode: "GRP-04", kategori: "FROZEN FARMER GROUPER SKIN LESS", size: "1-3 lbs", kodeProduksi: "PRD-GRP-04", unit: "Mc", sysQty: 2, sysLbs: 40, opQty: 2, opLbs: 40, ket: "" },
+  
+  // 3. FROZEN WILD CAUGT GROUPER SKIN LESS
+  { barcode: "WGRP-01", kategori: "FROZEN WILD CAUGT GROUPER SKIN LESS", size: "4-6 oz", kodeProduksi: "PRD-WGRP-01", unit: "Mc", sysQty: 21, sysLbs: 210, opQty: 21, opLbs: 210, ket: "" },
+  { barcode: "WGRP-02", kategori: "FROZEN WILD CAUGT GROUPER SKIN LESS", size: "6-8 oz", kodeProduksi: "PRD-WGRP-02", unit: "Mc", sysQty: 140, sysLbs: 1400, opQty: 140, opLbs: 1400, ket: "" },
+  { barcode: "WGRP-03", kategori: "FROZEN WILD CAUGT GROUPER SKIN LESS", size: "8-10 oz", kodeProduksi: "PRD-WGRP-03", unit: "Mc", sysQty: 109, sysLbs: 1090, opQty: 109, opLbs: 1090, ket: "" },
+  { barcode: "WGRP-04", kategori: "FROZEN WILD CAUGT GROUPER SKIN LESS", size: "1-3 lbs", kodeProduksi: "PRD-WGRP-04", unit: "Mc", sysQty: 0, sysLbs: 0, opQty: 0, opLbs: 0, ket: "" },
+  
+  // 4. SNAPPER FLT S/ON CO IVP
+  { barcode: "SNP-01", kategori: "SNAPPER FLT S/ON CO IVP", size: "5OZ", kodeProduksi: "PRD-SNP-01", unit: "Mc", sysQty: 3, sysLbs: 30, opQty: 3, opLbs: 30, ket: "" },
+  { barcode: "SNP-02", kategori: "SNAPPER FLT S/ON CO IVP", size: "6-8 OZ", kodeProduksi: "PRD-SNP-02", unit: "Mc", sysQty: 17, sysLbs: 170, opQty: 17, opLbs: 170, ket: "" },
+
+  // 5. RED SNAPPER FLT S/ON CO IVP
+  { barcode: "RSNP-01", kategori: "RED SNAPPER FLT S/ON CO IVP", size: "6-8 OZ", kodeProduksi: "PRD-RSNP-01", unit: "Mc", sysQty: 29, sysLbs: 290, opQty: 29, opLbs: 290, ket: "" },
+  { barcode: "RSNP-02", kategori: "RED SNAPPER FLT S/ON CO IVP", size: "8-10 OZ", kodeProduksi: "PRD-RSNP-02", unit: "Mc", sysQty: 35, sysLbs: 350, opQty: 35, opLbs: 350, ket: "" },
+
+  // 6. FROZEN OCTOPUS CUT & BALL USA
+  { barcode: "OCT-USA-01", kategori: "FROZEN OCTOPUS CUT USA", size: "Standard Cut", kodeProduksi: "PRD-OCT-01", unit: "Bag", sysQty: 2116, sysLbs: 2116, opQty: 2116, opLbs: 2116, ket: "" },
+  { barcode: "OCT-BALL", kategori: "FROZEN OCTOPUS BALL TYPE USA", size: "2-4 lbs", kodeProduksi: "PRD-OCT-02", unit: "Mc", sysQty: 40, sysLbs: 1200, opQty: 40, opLbs: 1200, ket: "" },
+  { barcode: "OCT-ANGKE", kategori: "FROZEN OCTOPUS CUT USA", size: "Angke", kodeProduksi: "PRD-OCT-03", unit: "Bag", sysQty: 4012, sysLbs: 4012, opQty: 4012, opLbs: 4012, ket: "Barang di Lbs Jakarta" },
+
+  // 7. FROZEN OCTOPUS CUT KOREA & TENTACLE
+  { barcode: "OCT-KOR", kategori: "FROZEN OCTOPUS CUT", size: "6-7 Korea", kodeProduksi: "PRD-OCT-04", unit: "Mc", sysQty: 135, sysLbs: 4460.35, opQty: 135, opLbs: 4460.35, ket: "" },
+  { barcode: "OCT-TEN-01", kategori: "FROZEN OCTOPUS SLICE TENTACLE", size: "100-200", kodeProduksi: "PRD-OCT-05", unit: "Mc", sysQty: 0, sysLbs: 0, opQty: 0, opLbs: 0, ket: "" },
+  { barcode: "OCT-TEN-02", kategori: "FROZEN OCTOPUS SLICE TENTACLE", size: "200-300", kodeProduksi: "PRD-OCT-06", unit: "Mc", sysQty: 0, sysLbs: 0, opQty: 0, opLbs: 0, ket: "" },
+
+  // 8. FROZEN COOKED OCTOPUS LEG & MEDALLION
+  { barcode: "OCT-LEG", kategori: "FROZEN COOKED OCTOPUS LEG", size: "Regular", kodeProduksi: "PRD-OCT-07", unit: "Mc", sysQty: 311, sysLbs: 3110, opQty: 312, opLbs: 3120, ket: "" },
+  { barcode: "OCT-MED", kategori: "FROZEN COOKED OCTOPUS MEDALLION", size: "Standard", kodeProduksi: "PRD-OCT-08", unit: "Mc", sysQty: 112, sysLbs: 1120, opQty: 113, opLbs: 1130, ket: "" },
+
+  // 9. FROZEN OCTOPUS SV DSI & TM
+  { barcode: "OCT-SV-01", kategori: "FROZEN OCTOPUS SV DSI", size: "size 14-16 pc", kodeProduksi: "PRD-SV-01", unit: "Bag", sysQty: 96, sysLbs: 211.20, opQty: 96, opLbs: 211.20, ket: "" },
+  { barcode: "OCT-SV-UND", kategori: "FROZEN OCTOPUS SV DSI", size: "under size", kodeProduksi: "PRD-SV-02", unit: "Bag", sysQty: 16, sysLbs: 35.20, opQty: 16, opLbs: 35.20, ket: "" },
+  { barcode: "OCT-TM", kategori: "FROZEN OCTOPUS SV DSI TM", size: "50 UP", kodeProduksi: "PRD-SV-03", unit: "Bag", sysQty: 264, sysLbs: 580.80, opQty: 264, opLbs: 580.80, ket: "" },
+  { barcode: "OCT-TM-UND", kategori: "FROZEN OCTOPUS SV DSI TM", size: "under size", kodeProduksi: "PRD-SV-04", unit: "Bag", sysQty: 29, sysLbs: 63.80, opQty: 29, opLbs: 63.80, ket: "" },
+
+  // 10. FROZEN CRABMEAT
+  { barcode: "CRB-01", kategori: "FROZEN CRABMEAT- CCF", size: "Standard", kodeProduksi: "PRD-CRB-01", unit: "Bag", sysQty: 290, sysLbs: 290, opQty: 290, opLbs: 290, ket: "" }
+];
+
+let items = JSON.parse(localStorage.getItem('LBS_INVENTORY_ITEMS_V2')) || defaultItems;
+
+// Suara Beep saat Scan Sukses
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playBeep() {
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 880; // Nada A5
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.15);
+  } catch(e) {}
+}
+
+function saveData() {
+  localStorage.setItem('LBS_INVENTORY_ITEMS_V2', JSON.stringify(items));
+  renderAll();
+}
+
+function renderAll() {
+  renderInventoryTable();
+  renderDashboard();
+  renderLaporan();
+}
+
+function renderInventoryTable() {
+  const tbody = document.getElementById('inventoryTableBody');
+  tbody.innerHTML = '';
+  
+  items.forEach((item, idx) => {
+    tbody.innerHTML += `
+      <tr>
+        <td class="text-center">${idx + 1}</td>
+        <td><span class="badge badge-code">${item.barcode}</span></td>
+        <td>
+          <div class="fw-bold text-dark">${item.kategori}</div>
+          <small class="text-primary">${item.size}</small>
+        </td>
+        <td class="text-center"><span class="badge bg-secondary">${item.unit}</span></td>
+        <td>
+          <input type="text" class="form-control form-control-sm" value="${item.kodeProduksi || ''}" onchange="updateItemField(${idx}, 'kodeProduksi', this.value)">
+        </td>
+        <td>
+          <input type="number" class="form-control form-control-sm text-end fw-bold" value="${item.sysQty}" onchange="updateItemField(${idx}, 'sysQty', Number(this.value))">
+        </td>
+        <td>
+          <input type="number" step="any" class="form-control form-control-sm text-end fw-bold text-primary" value="${item.sysLbs}" onchange="updateItemField(${idx}, 'sysLbs', Number(this.value))">
+        </td>
+        <td>
+          <input type="text" class="form-control form-control-sm" value="${item.ket || ''}" placeholder="Keterangan..." onchange="updateItemField(${idx}, 'ket', this.value)">
+        </td>
+        <td class="text-center">
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-dark" onclick="showBarcodeModal(${idx})" title="Cetak Barcode"><i class="bi bi-qr-code"></i></button>
+            <button class="btn btn-outline-danger" onclick="deleteItem(${idx})" title="Hapus"><i class="bi bi-trash"></i></button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function updateItemField(idx, field, val) {
+  items[idx][field] = val;
+  saveData();
+}
+
+function deleteItem(idx) {
+  if (confirm(`Hapus item ${items[idx].kategori} (${items[idx].size})?`)) {
+    items.splice(idx, 1);
+    saveData();
+  }
+}
+
+function renderDashboard() {
+  document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('id-ID', { dateStyle: 'long' });
+  document.getElementById('dashTotalItem').innerText = items.length;
+  
+  const totalQty = items.reduce((acc, i) => acc + (Number(i.sysQty) || 0), 0);
+  const totalLbs = items.reduce((acc, i) => acc + (Number(i.sysLbs) || 0), 0);
+  
+  document.getElementById('dashTotalQty').innerText = totalQty.toLocaleString('id-ID');
+  document.getElementById('dashTotalLbs').innerText = totalLbs.toLocaleString('id-ID', {maximumFractionDigits: 2}) + ' Lbs';
+
+  let countSelisih = 0;
+  items.forEach(i => {
+    const diffQty = (Number(i.opQty) || 0) - (Number(i.sysQty) || 0);
+    const diffLbs = (Number(i.opLbs) || 0) - (Number(i.sysLbs) || 0);
+    if (diffQty !== 0 || Math.abs(diffLbs) > 0.01) {
+      countSelisih++;
+    }
+  });
+  document.getElementById('dashTotalSelisih').innerText = countSelisih + ' Varian';
+
+  const catMap = {};
+  items.forEach(i => {
+    if (!catMap[i.kategori]) {
+      catMap[i.kategori] = { count: 0, sysQty: 0, sysLbs: 0, opLbs: 0 };
+    }
+    catMap[i.kategori].count++;
+    catMap[i.kategori].sysQty += Number(i.sysQty) || 0;
+    catMap[i.kategori].sysLbs += Number(i.sysLbs) || 0;
+    catMap[i.kategori].opLbs += Number(i.opLbs) || 0;
+  });
+
+  const catTbody = document.getElementById('categorySummaryBody');
+  catTbody.innerHTML = '';
+  Object.keys(catMap).forEach(k => {
+    const d = catMap[k];
+    const diff = d.opLbs - d.sysLbs;
+    let badgeStatus = '<span class="badge bg-success">Cocok</span>';
+    if (Math.abs(diff) > 0.01) {
+      badgeStatus = `<span class="badge bg-danger">Selisih ${diff > 0 ? '+' : ''}${diff.toFixed(1)} Lbs</span>`;
+    }
+    catTbody.innerHTML += `
+      <tr>
+        <td class="fw-bold">${k}</td>
+        <td class="text-center">${d.count}</td>
+        <td class="text-end">${d.sysQty.toLocaleString('id-ID')}</td>
+        <td class="text-end fw-bold">${d.sysLbs.toLocaleString('id-ID', {maximumFractionDigits: 2})} Lbs</td>
+        <td class="text-end fw-bold">${d.opLbs.toLocaleString('id-ID', {maximumFractionDigits: 2})} Lbs</td>
+        <td class="text-center">${badgeStatus}</td>
+      </tr>
+    `;
+  });
+}
+
+function renderLaporan() {
+  const tbody = document.getElementById('previewLaporanBody');
+  tbody.innerHTML = '';
+
+  let currentCat = '';
+  let subSysQty = 0, subSysLbs = 0, subOpQty = 0, subOpLbs = 0, subDiffQty = 0, subDiffLbs = 0;
+  let unitCat = '';
+  let catSubItems = [];
+
+  function flushSubtotal() {
+    if (catSubItems.length > 0) {
+      tbody.innerHTML += `
+        <tr class="table-subtotal text-primary">
+          <td colspan="2" class="text-center">Total ${currentCat}</td>
+          <td class="text-end">${subSysQty ? subSysQty.toLocaleString('id-ID') : '-'}</td>
+          <td class="text-center">${unitCat}</td>
+          <td class="text-end">${subSysLbs ? subSysLbs.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-'}</td>
+          <td class="text-center">Lbs</td>
+          <td class="text-end">${subOpQty ? subOpQty.toLocaleString('id-ID') : '-'}</td>
+          <td class="text-center">${unitCat}</td>
+          <td class="text-end">${subOpLbs ? subOpLbs.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-'}</td>
+          <td class="text-center">Lbs</td>
+          <td class="text-end ${subDiffQty > 0 ? 'diff-plus' : (subDiffQty < 0 ? 'diff-minus' : '')}">${subDiffQty !== 0 ? subDiffQty : '-'}</td>
+          <td class="text-center">${unitCat}</td>
+          <td class="text-end ${subDiffLbs > 0 ? 'diff-plus' : (subDiffLbs < 0 ? 'diff-minus' : '')}">${subDiffLbs !== 0 ? subDiffLbs.toFixed(1) : '-'}</td>
+          <td class="text-center">Lbs</td>
+          <td></td>
+        </tr>
+      `;
+    }
+  }
+
+  let rowNum = 1;
+  items.forEach((item, idx) => {
+    if (item.kategori !== currentCat) {
+      flushSubtotal();
+      currentCat = item.kategori;
+      subSysQty = 0; subSysLbs = 0; subOpQty = 0; subOpLbs = 0; subDiffQty = 0; subDiffLbs = 0;
+      unitCat = item.unit;
+      catSubItems = [];
+      rowNum = 1;
+    }
+
+    catSubItems.push(item);
+    const sq = Number(item.sysQty) || 0;
+    const sl = Number(item.sysLbs) || 0;
+    const oq = Number(item.opQty) || 0;
+    const ol = Number(item.opLbs) || 0;
+    const dq = oq - sq;
+    const dl = ol - sl;
+
+    subSysQty += sq; subSysLbs += sl; subOpQty += oq; subOpLbs += ol;
+    subDiffQty += dq; subDiffLbs += dl;
+
+    tbody.innerHTML += `
+      <tr>
+        <td class="text-center">${rowNum++}</td>
+        <td>
+          <div class="fw-bold">${item.kategori}</div>
+          <div class="text-muted" style="font-size:0.8rem;">${item.size}</div>
+        </td>
+        <td class="text-end">${sq ? sq.toLocaleString('id-ID') : '-'}</td>
+        <td class="text-center">${item.unit}</td>
+        <td class="text-end">${sl ? sl.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-'}</td>
+        <td class="text-center">Lbs</td>
+        <td class="text-end">${oq ? oq.toLocaleString('id-ID') : '-'}</td>
+        <td class="text-center">${item.unit}</td>
+        <td class="text-end">${ol ? ol.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-'}</td>
+        <td class="text-center">Lbs</td>
+        <td class="text-end ${dq > 0 ? 'diff-plus' : (dq < 0 ? 'diff-minus' : '')}">${dq !== 0 ? dq : '-'}</td>
+        <td class="text-center">${item.unit}</td>
+        <td class="text-end ${dl > 0 ? 'diff-plus' : (dl < 0 ? 'diff-minus' : '')}">${dl !== 0 ? dl.toFixed(1) : '-'}</td>
+        <td class="text-center">Lbs</td>
+        <td><small class="text-danger">${item.ket || ''}</small></td>
+      </tr>
+    `;
+  });
+  flushSubtotal();
+}
+
+// ----------------------------------------------------
+// LOGIKA BARCODE SCANNER: USB/BLUETOOTH + INPUT + KAMERA
+// ----------------------------------------------------
+
+// 1. Scanner Input Field Listener
+const scanInput = document.getElementById('barcodeScannerInput');
+scanInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    processBarcodeSearch(this.value);
+  }
+});
+
+// 2. Global Keyboard Buffer Listener (Menangkap Scanner Fisik di mana saja)
+let barcodeBuffer = '';
+let lastKeyTime = Date.now();
+window.addEventListener('keydown', function(e) {
+  // Jangan intercept jika user sedang mengetik di form text lain
+  const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+  const activeId = document.activeElement ? document.activeElement.id : '';
+  if ((activeTag === 'input' || activeTag === 'textarea') && activeId !== 'barcodeScannerInput') {
+    return;
+  }
+
+  const now = Date.now();
+  // Scanner barcode fisik biasanya mengetik karakter sangat cepat (< 50ms per key)
+  if (now - lastKeyTime > 150) {
+    barcodeBuffer = '';
+  }
+  lastKeyTime = now;
+
+  if (e.key === 'Enter') {
+    if (barcodeBuffer.length > 2) {
+      e.preventDefault();
+      // Pindah ke tab Opname otomatis jika sedang di tab lain
+      const opnameBtn = document.querySelector('[data-bs-target="#opnameTab"]');
+      if (opnameBtn) bootstrap.Tab.getOrCreateInstance(opnameBtn).show();
+      processBarcodeSearch(barcodeBuffer);
+      barcodeBuffer = '';
+    }
+  } else if (e.key.length === 1) {
+    barcodeBuffer += e.key;
+  }
+});
+
+// 3. Fungsi Utama Pemrosesan Barcode
+function processBarcodeSearch(rawCode) {
+  if (!rawCode) return;
+  const cleanCode = rawCode.trim();
+  const alertBox = document.getElementById('scanStatusAlert');
+  alertBox.classList.remove('d-none');
+
+  // Cari di database (case-insensitive & whitespace trimmed)
+  const idx = items.findIndex(i => i.barcode.trim().toLowerCase() === cleanCode.toLowerCase());
+
+  if (idx !== -1) {
+    playBeep(); // Bunyi Beep saat scan berhasil!
+    const item = items[idx];
+    alertBox.className = "alert alert-success";
+    alertBox.innerHTML = `<i class="bi bi-check-circle-fill me-2 fs-5"></i> DITEMUKAN: <b>${item.kategori}</b> — ${item.size} (Kode: ${item.barcode})`;
+    
+    document.getElementById('opnameItemIndex').value = idx;
+    document.getElementById('opnameNamaDisplay').value = `${item.kategori} - ${item.size} [${item.barcode}]`;
+    document.getElementById('opnameKodeProduksi').value = item.kodeProduksi || '';
+    document.getElementById('opnameKeterangan').value = item.ket || '';
+    document.getElementById('opnameSysQty').value = item.sysQty;
+    document.getElementById('opnameSysLbs').value = item.sysLbs;
+    document.getElementById('opnameRealQty').value = item.opQty !== undefined ? item.opQty : item.sysQty;
+    document.getElementById('opnameRealLbs').value = item.opLbs !== undefined ? item.opLbs : item.sysLbs;
+
+    document.getElementById('opnameRealQty').focus();
+    document.getElementById('opnameRealQty').select();
+  } else {
+    alertBox.className = "alert alert-danger";
+    alertBox.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i> Barcode <b>"${cleanCode}"</b> tidak terdaftar di sistem! Silakan daftarkan di menu Master Stok.`;
+  }
+  document.getElementById('barcodeScannerInput').value = '';
+}
+
+// 4. Live Camera Scanner via Html5-QRCode
+let html5QrCode = null;
+function initCamera() {
+  if (html5QrCode && html5QrCode.isScanning) {
+    return;
+  }
+  html5QrCode = new Html5Qrcode("reader");
+  const config = { fps: 15, qrbox: { width: 300, height: 180 } };
+  
+  html5QrCode.start(
+    { facingMode: "environment" },
+    config,
+    (decodedText) => {
+      // Barcode terbaca dari kamera!
+      processBarcodeSearch(decodedText);
+    },
+    (errorMessage) => {
+      // scanning in progress
+    }
+  ).catch(err => {
+    console.warn("Gagal membuka kamera:", err);
+    document.getElementById('reader').innerHTML = `
+      <div class="alert alert-warning small p-2">
+        Kamera tidak aktif atau izin ditolak. Pastikan izin kamera di browser telah diizinkan.
+      </div>
+    `;
+  });
+}
+
+function stopCamera() {
+  if (html5QrCode && html5QrCode.isScanning) {
+    html5QrCode.stop().then(() => {
+      document.getElementById('reader').innerHTML = '';
+    });
+  }
+}
+
+// 5. Generate Modal Barcode & Cetak
+function showBarcodeModal(idx) {
+  const item = items[idx];
+  document.getElementById('lblNama').innerText = item.kategori;
+  document.getElementById('lblSize').innerText = `Varian: ${item.size} | Satuan: ${item.unit}`;
+  document.getElementById('lblKode').innerText = `KODE BATCH: ${item.kodeProduksi || '-'}`;
+
+  // Generate Barcode SVG menggunakan Code128
+  JsBarcode("#barcodeSvg", item.barcode, {
+    format: "CODE128",
+    lineColor: "#000",
+    width: 2.2,
+    height: 65,
+    displayValue: true,
+    fontSize: 16
+  });
+
+  const modal = new bootstrap.Modal(document.getElementById('modalBarcodeLabel'));
+  modal.show();
+}
+
+function printBarcodeLabel() {
+  const printContents = document.getElementById('printableBarcodeArea').innerHTML;
+  const originalContents = document.body.innerHTML;
+  document.body.innerHTML = `<div style="text-align:center; padding: 40px;">${printContents}</div>`;
+  window.print();
+  document.body.innerHTML = originalContents;
+  location.reload();
+}
+
+// Form Opname Save
+document.getElementById('formOpnameUpdate').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const idx = document.getElementById('opnameItemIndex').value;
+  if (idx === '' || idx === undefined) {
+    alert('Silakan scan produk terlebih dahulu!');
+    return;
+  }
+
+  const realQty = Number(document.getElementById('opnameRealQty').value);
+  const realLbs = Number(document.getElementById('opnameRealLbs').value);
+  const kodeProduksi = document.getElementById('opnameKodeProduksi').value;
+  const ket = document.getElementById('opnameKeterangan').value;
+
+  items[idx].opQty = realQty;
+  items[idx].opLbs = realLbs;
+  items[idx].kodeProduksi = kodeProduksi;
+  items[idx].ket = ket;
+
+  saveData();
+  alert(`Berhasil memperbarui data opname untuk ${items[idx].kategori} (${items[idx].size})!`);
+  resetOpnameForm();
+});
+
+function resetOpnameForm() {
+  document.getElementById('formOpnameUpdate').reset();
+  document.getElementById('opnameItemIndex').value = '';
+  document.getElementById('opnameNamaDisplay').value = '';
+  document.getElementById('scanStatusAlert').classList.add('d-none');
+}
+
+// Tambah Produk Baru
+document.getElementById('formTambahProdukBaru').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const newItem = {
+    barcode: document.getElementById('newBarcode').value.trim(),
+    kategori: document.getElementById('newCategory').value.trim(),
+    size: document.getElementById('newSize').value.trim(),
+    kodeProduksi: document.getElementById('newKodeProduksi').value.trim(),
+    unit: document.getElementById('newUnit').value,
+    sysQty: Number(document.getElementById('newQty').value),
+    sysLbs: Number(document.getElementById('newLbs').value),
+    opQty: Number(document.getElementById('newQty').value),
+    opLbs: Number(document.getElementById('newLbs').value),
+    ket: document.getElementById('newKeterangan').value.trim()
+  };
+
+  if (items.some(i => i.barcode.toLowerCase() === newItem.barcode.toLowerCase())) {
+    alert('Barcode ini sudah terdaftar! Gunakan barcode unik.');
+    return;
+  }
+
+  items.push(newItem);
+  saveData();
+  alert('Produk baru berhasil ditambahkan ke inventori!');
+  this.reset();
+  bootstrap.Modal.getInstance(document.getElementById('modalTambahProduk')).hide();
+});
+
+// EXPORT EXCEL
+function exportToExcel() {
+  const docNo = document.getElementById('docNomor').value;
+  const docDate = document.getElementById('docTanggal').value;
+  const docLoc = document.getElementById('docLokasi').value;
+
+  const aoa = [
+    ["No : " + docNo],
+    ["Date : " + docDate],
+    [],
+    ["BERITA ACARA STOK OPNAME COLD STORAGE"],
+    [],
+    [`Pada hari ini, ${docDate}, bertempat di PT. Lampung Bay Seafood dengan alamat ${docLoc}. Telah dilakukan stok opname Cold Storage, berdasarkan opname yang dilakukan terdiri dari :`],
+    [],
+    [
+      "NO", "NAMA BARANG", "SIZE", 
+      "STOCK INVENTORY (QTY)", "UNIT", "STOCK INVENTORY (LBS)", "UNIT",
+      "OPNAME (QTY)", "UNIT", "OPNAME (LBS)", "UNIT",
+      "SELISIH (QTY)", "UNIT", "SELISIH (LBS)", "UNIT",
+      "KODE PRODUKSI", "KETERANGAN"
+    ]
+  ];
+
+  let currentCat = '';
+  let subSysQty = 0, subSysLbs = 0, subOpQty = 0, subOpLbs = 0;
+  let unitCat = 'Mc';
+  let rowNum = 1;
+
+  function flushExcelSubtotal() {
+    if (currentCat) {
+      const diffQ = subOpQty - subSysQty;
+      const diffL = subOpLbs - subSysLbs;
+      aoa.push([
+        "", `Total ${currentCat}`, "",
+        subSysQty || "-", unitCat, subSysLbs || "-", "Lbs",
+        subOpQty || "-", unitCat, subOpLbs || "-", "Lbs",
+        diffQ !== 0 ? diffQ : "-", unitCat, diffL !== 0 ? diffL : "-", "Lbs",
+        "", ""
+      ]);
+    }
+  }
+
+  items.forEach(item => {
+    if (item.kategori !== currentCat) {
+      flushExcelSubtotal();
+      currentCat = item.kategori;
+      subSysQty = 0; subSysLbs = 0; subOpQty = 0; subOpLbs = 0;
+      unitCat = item.unit;
+      rowNum = 1;
+    }
+
+    const sq = Number(item.sysQty) || 0;
+    const sl = Number(item.sysLbs) || 0;
+    const oq = Number(item.opQty) || 0;
+    const ol = Number(item.opLbs) || 0;
+    const dq = oq - sq;
+    const dl = ol - sl;
+
+    subSysQty += sq; subSysLbs += sl; subOpQty += oq; subOpLbs += ol;
+
+    aoa.push([
+      rowNum++,
+      item.kategori,
+      item.size,
+      sq || "-", item.unit, sl || "-", "Lbs",
+      oq || "-", item.unit, ol || "-", "Lbs",
+      dq !== 0 ? dq : "-", item.unit, dl !== 0 ? dl : "-", "Lbs",
+      item.kodeProduksi || "-",
+      item.ket || ""
+    ]);
+  });
+  flushExcelSubtotal();
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Stok Opname");
+  XLSX.writeFile(wb, "Berita_Acara_Stok_Opname_PT_Lampung_Bay_Seafood.xlsx");
+}
+
+// EXPORT PDF
+function exportToPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('l', 'pt', 'a4');
+
+  const docNo = document.getElementById('docNomor').value;
+  const docDate = document.getElementById('docTanggal').value;
+  const docLoc = document.getElementById('docLokasi').value;
+
+  doc.setFontSize(9);
+  doc.text(`No   : ${docNo}`, 40, 30);
+  doc.text(`Date : ${docDate}`, 40, 42);
+
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text("BERITA ACARA STOK OPNAME COLD STORAGE", doc.internal.pageSize.getWidth() / 2, 60, { align: "center" });
+
+  doc.setFontSize(8.5);
+  doc.setFont("helvetica", "normal");
+  const introText = `Pada hari ini, ${docDate}, bertempat di PT. Lampung Bay Seafood dengan alamat ${docLoc}. Telah dilakukan stok opname Cold Storage, berdasarkan opname yang dilakukan terdiri dari :`;
+  const splitIntro = doc.splitTextToSize(introText, doc.internal.pageSize.getWidth() - 80);
+  doc.text(splitIntro, 40, 80);
+
+  const tableRows = [];
+  let currentCat = '';
+  let subSysQty = 0, subSysLbs = 0, subOpQty = 0, subOpLbs = 0, subDiffQty = 0, subDiffLbs = 0;
+  let unitCat = 'Mc';
+  let rowNum = 1;
+
+  function flushPdfSub() {
+    if (currentCat) {
+      tableRows.push([
+        { content: `Total ${currentCat}`, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [240, 245, 255] } },
+        { content: subSysQty ? subSysQty.toLocaleString('id-ID') : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+        { content: unitCat, styles: { fontStyle: 'bold', halign: 'center' } },
+        { content: subSysLbs ? subSysLbs.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+        { content: "Lbs", styles: { fontStyle: 'bold', halign: 'center' } },
+        { content: subOpQty ? subOpQty.toLocaleString('id-ID') : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+        { content: unitCat, styles: { fontStyle: 'bold', halign: 'center' } },
+        { content: subOpLbs ? subOpLbs.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+        { content: "Lbs", styles: { fontStyle: 'bold', halign: 'center' } },
+        { content: subDiffQty !== 0 ? subDiffQty.toString() : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+        { content: unitCat, styles: { fontStyle: 'bold', halign: 'center' } },
+        { content: subDiffLbs !== 0 ? subDiffLbs.toFixed(1) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+        { content: "Lbs", styles: { fontStyle: 'bold', halign: 'center' } },
+        { content: "", styles: { fontStyle: 'bold' } }
+      ]);
+    }
+  }
+
+  items.forEach(item => {
+    if (item.kategori !== currentCat) {
+      flushPdfSub();
+      currentCat = item.kategori;
+      subSysQty = 0; subSysLbs = 0; subOpQty = 0; subOpLbs = 0; subDiffQty = 0; subDiffLbs = 0;
+      unitCat = item.unit;
+      rowNum = 1;
+    }
+
+    const sq = Number(item.sysQty) || 0;
+    const sl = Number(item.sysLbs) || 0;
+    const oq = Number(item.opQty) || 0;
+    const ol = Number(item.opLbs) || 0;
+    const dq = oq - sq;
+    const dl = ol - sl;
+
+    subSysQty += sq; subSysLbs += sl; subOpQty += oq; subOpLbs += ol;
+    subDiffQty += dq; subDiffLbs += dl;
+
+    tableRows.push([
+      { content: rowNum++.toString(), styles: { halign: 'center' } },
+      `${item.kategori} ${item.size}`,
+      { content: sq ? sq.toLocaleString('id-ID') : '-', styles: { halign: 'right' } },
+      { content: item.unit, styles: { halign: 'center' } },
+      { content: sl ? sl.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { halign: 'right' } },
+      { content: "Lbs", styles: { halign: 'center' } },
+      { content: oq ? oq.toLocaleString('id-ID') : '-', styles: { halign: 'right' } },
+      { content: item.unit, styles: { halign: 'center' } },
+      { content: ol ? ol.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { halign: 'right' } },
+      { content: "Lbs", styles: { halign: 'center' } },
+      { content: dq !== 0 ? dq.toString() : '-', styles: { halign: 'right', textColor: dq !== 0 ? [220, 53, 69] : [0,0,0] } },
+      { content: item.unit, styles: { halign: 'center' } },
+      { content: dl !== 0 ? dl.toFixed(1) : '-', styles: { halign: 'right', textColor: dl !== 0 ? [220, 53, 69] : [0,0,0] } },
+      { content: "Lbs", styles: { halign: 'center' } },
+      item.ket || ""
+    ]);
+  });
+  flushPdfSub();
+
+  doc.autoTable({
+    startY: 105,
+    margin: { left: 30, right: 30 },
+    theme: 'grid',
+    styles: { fontSize: 7, cellPadding: 2.5, valign: 'middle' },
+    headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+    head: [
+      [
+        { content: 'NO', rowSpan: 2 },
+        { content: 'NAMA BARANG', rowSpan: 2 },
+        { content: 'STOCK INVENTORY', colSpan: 4 },
+        { content: 'OPNAME', colSpan: 4 },
+        { content: 'SELISIH', colSpan: 4 },
+        { content: 'KETERANGAN', rowSpan: 2 }
+      ],
+      [
+        'QTY', 'UNIT', 'LBS', 'UNIT',
+        'QTY', 'UNIT', 'LBS', 'UNIT',
+        'QTY', 'UNIT', 'LBS', 'UNIT'
+      ]
+    ],
+    body: tableRows,
+    didDrawPage: function (data) {
+      const pageStr = "Page " + doc.internal.getNumberOfPages();
+      doc.setFontSize(8);
+      doc.text(pageStr, doc.internal.pageSize.getWidth() - 60, doc.internal.pageSize.getHeight() - 20);
+    }
+  });
+
+  doc.save("Berita_Acara_Stok_Opname_PT_Lampung_Bay_Seafood.pdf");
+}
+
+// Inisialisasi awal
+renderAll();
+</script>
+
+</body>
+</html>
