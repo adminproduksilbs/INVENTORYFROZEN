@@ -25,3 +25,12 @@ Diperlukan Firebase CLI dan project `lbs-peminjaman`.
 
 ## Catatan keamanan
 PIN hanya berada di Secret Manager melalui Cloud Functions. Client browser tidak menerima nilai PIN atau password internal Firebase. Firestore Rules tetap memakai UID Operator yang sudah ada.
+
+
+## FINAL v15 - Login Operator tanpa Cloud Functions
+- Operator cukup memasukkan PIN: `0112`
+- Aplikasi menggunakan akun Firebase Authentication `operator@lbs.com` di belakang layar.
+- Password Authentication Operator: `011222`
+- Tidak memerlukan Cloud Functions atau paket Blaze.
+- Pastikan akun Authentication `operator@lbs.com` memiliki password `011222`.
+- Dokumen Firestore `users/OD1D85j502azoQzGuuBf7Hb5Bwp1` harus memiliki role `operator` dan aktif `true`.

@@ -1,11 +1,9 @@
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import{getAuth,signInWithEmailAndPassword,signInWithCustomToken,onAuthStateChanged,signOut,createUserWithEmailAndPassword,initializeAuth}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import{getFunctions,httpsCallable}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-functions.js";
+import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut,createUserWithEmailAndPassword,initializeAuth}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import{getFirestore,collection,getDocs,getDoc,doc,addDoc,setDoc,updateDoc,deleteDoc,serverTimestamp,runTransaction,writeBatch,query,orderBy,limit}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const firebaseConfig={apiKey:"AIzaSyCTLUXUO1AraBgH3WO4e0izSnY319lWNyQ",authDomain:"lbs-peminjaman.firebaseapp.com",projectId:"lbs-peminjaman",storageBucket:"lbs-peminjaman.firebasestorage.app",messagingSenderId:"1036341632994",appId:"1:1036341632994:web:879fec5848a7f523d3e3bb"};
-const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),functions=getFunctions(app);
-const operatorPinLogin=httpsCallable(functions,"operatorPinLogin");
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const $=id=>document.getElementById(id);
 let currentUser=null,currentProfile=null,products=[],categories=[],transactions=[],opnames=[],detailsCache={};
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
@@ -21,7 +19,7 @@ let loginMode="admin";
 function setLoginMode(mode){loginMode=mode;$("adminLoginTab").classList.toggle("active",mode==="admin");$("operatorLoginTab").classList.toggle("active",mode==="operator");$("adminLoginFields").classList.toggle("hidden",mode!=="admin");$("operatorLoginFields").classList.toggle("hidden",mode!=="operator");$("loginError").textContent="";$("loginBtn").textContent=mode==="operator"?"Masuk sebagai Operator":"Masuk";}
 $("adminLoginTab").onclick=()=>setLoginMode("admin");
 $("operatorLoginTab").onclick=()=>setLoginMode("operator");
-$("loginBtn").onclick=async()=>{ $("loginError").textContent="";try{if(loginMode==="operator"){const pin=$("operatorPin").value.trim();if(!/^\d{4}$/.test(pin)){throw new Error("PIN harus 4 digit.")}const result=await operatorPinLogin({pin});if(!result.data?.token){throw new Error("Token login tidak diterima.")}await signInWithCustomToken(auth,result.data.token)}else{await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value)}}catch(e){$("loginError").textContent=e.message==="PIN harus 4 digit."?e.message:"Login gagal. Periksa PIN/password."}};
+$("loginBtn").onclick=async()=>{ $("loginError").textContent="";try{if(loginMode==="operator"){const pin=$("operatorPin").value.trim();if(!/^\d{4}$/.test(pin)){throw new Error("PIN harus 4 digit.")}await signInWithEmailAndPassword(auth,"operator@lbs.com","011222")}else{await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value)}}catch(e){$("loginError").textContent=e.message==="PIN harus 4 digit."?e.message:"Login gagal. Periksa PIN/password."}};
 $("logoutBtn").onclick=()=>signOut(auth);
 
 async function loadProducts(){products=(await getDocs(collection(db,"products"))).docs.map(x=>({id:x.id,...x.data()}));}
