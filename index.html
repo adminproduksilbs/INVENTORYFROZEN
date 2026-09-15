@@ -10,9 +10,10 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   
   <!-- SheetJS (xlsx) & jsPDF for Export -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  
   <!-- JsBarcode & Html5-QRCode -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -49,10 +50,9 @@
     </span>
     
     <div class="d-flex align-items-center gap-2">
-      <!-- Status Koneksi Realtime -->
       <span id="firebaseStatusBadge" class="badge bg-secondary d-flex align-items-center py-2 px-3">
         <span class="status-dot status-offline" id="statusDot"></span>
-        <span id="statusText">Menghubungkan...</span>
+        <span id="statusText">Memeriksa Database...</span>
       </span>
     </div>
   </div>
@@ -69,7 +69,7 @@
           <div class="input-group">
             <select id="selectSession" class="form-select fw-bold text-primary" onchange="switchSession(this.value)">
             </select>
-            <button class="btn btn-outline-primary" onclick="promptNewSession()"><i class="bi bi-plus-circle me-1"></i> Buat Opname Baru</button>
+            <button class="btn btn-outline-primary" type="button" onclick="promptNewSession()"><i class="bi bi-plus-circle me-1"></i> Buat Opname Baru</button>
           </div>
         </div>
 
@@ -79,8 +79,8 @@
         </div>
 
         <div class="col-md-3 text-md-end pt-md-3">
-          <button class="btn btn-success btn-sm me-1" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-          <button class="btn btn-danger btn-sm" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+          <button class="btn btn-success btn-sm me-1 shadow-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Download Excel</button>
+          <button class="btn btn-danger btn-sm shadow-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Download PDF</button>
         </div>
       </div>
     </div>
@@ -135,7 +135,7 @@
                     <div class="input-group">
                       <span class="input-group-text"><i class="bi bi-upc fs-5"></i></span>
                       <input type="text" id="barcodeScannerInput" class="form-control form-control-lg fw-bold" placeholder="Scan barcode..." autofocus>
-                      <button class="btn btn-primary px-3" onclick="processBarcodeSearch(document.getElementById('barcodeScannerInput').value)">Cari</button>
+                      <button class="btn btn-primary px-3" type="button" onclick="processBarcodeSearch(document.getElementById('barcodeScannerInput').value)">Cari</button>
                     </div>
                   </div>
                 </div>
@@ -145,8 +145,8 @@
                     <div id="reader"></div>
                     <small class="text-muted d-block mt-2">Arahkan kamera ke barcode box/karton</small>
                     <div class="mt-2">
-                      <button class="btn btn-sm btn-outline-danger" onclick="stopCamera()"><i class="bi bi-camera-video-off"></i> Matikan</button>
-                      <button class="btn btn-sm btn-outline-primary" onclick="initCamera()"><i class="bi bi-arrow-clockwise"></i> Reset</button>
+                      <button class="btn btn-sm btn-outline-danger" type="button" onclick="stopCamera()"><i class="bi bi-camera-video-off"></i> Matikan</button>
+                      <button class="btn btn-sm btn-outline-primary" type="button" onclick="initCamera()"><i class="bi bi-arrow-clockwise"></i> Reset</button>
                     </div>
                   </div>
                 </div>
@@ -219,7 +219,7 @@
 
                 <div class="d-flex justify-content-end gap-2">
                   <button type="button" class="btn btn-secondary" onclick="resetOpnameForm()">Reset</button>
-                  <button type="submit" class="btn btn-success px-4"><i class="bi bi-cloud-arrow-up me-1"></i> Simpan ke Database Realtime</button>
+                  <button type="submit" class="btn btn-success px-4"><i class="bi bi-cloud-arrow-up me-1"></i> Simpan ke Database</button>
                 </div>
               </form>
             </div>
@@ -290,7 +290,7 @@
               <h5 class="card-title fw-bold mb-0">Daftar Item & Barcode Sesi Ini</h5>
               <small class="text-muted">Perubahan otomatis tersinkronisasi ke Firebase secara realtime</small>
             </div>
-            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalTambahProduk">
+            <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#modalTambahProduk">
               <i class="bi bi-plus-circle me-1"></i> Tambah Produk / Size Baru
             </button>
           </div>
@@ -327,8 +327,8 @@
               <div class="small text-muted">PT. Lampung Bay Seafood — Jl. Raya Tanjung Bintang No. 101 Desa Serdang, Kec. Tanjung Bintang</div>
             </div>
             <div class="d-flex gap-2">
-              <button class="btn btn-success btn-sm" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Unduh Excel</button>
-              <button class="btn btn-danger btn-sm" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Unduh PDF</button>
+              <button class="btn btn-success btn-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Unduh Excel</button>
+              <button class="btn btn-danger btn-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Unduh PDF</button>
             </div>
           </div>
         </div>
@@ -470,11 +470,11 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// Konfigurasi Firebase Proyek Anda (Sudah langsung tertanam)
+// Konfigurasi Firebase Realtime Database Proyek Anda
 const firebaseConfig = {
   apiKey: "AIzaSyAqta6QshdlBm94KTYZYO_8nJu_vxUsmLA",
   authDomain: "lbs-inventory-85220.firebaseapp.com",
-  databaseURL: "https://lbs-inventory-85220-default-rtdb.firebaseio.com",
+  databaseURL: "https://lbs-inventory-85220-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "lbs-inventory-85220",
   storageBucket: "lbs-inventory-85220.firebasestorage.app",
   messagingSenderId: "870336592213",
@@ -516,23 +516,46 @@ let currentDocNomor = "008/KEU/OPNAME/LBS/AGUST/2026";
 let allSessions = {};
 let currentItems = [];
 
+// Muat fallback lokal terlebih dahulu agar UI dan Tombol Unduh langsung aktif seketika
+function loadLocalFallback() {
+  allSessions = JSON.parse(localStorage.getItem('LBS_LOCAL_SESSIONS')) || {
+    [currentSessionKey]: {
+      docNomor: currentDocNomor,
+      tanggal: "Senin, 31 Agustus 2026",
+      items: JSON.parse(JSON.stringify(defaultItemsTemplate))
+    }
+  };
+  updateSessionDropdown();
+  loadCurrentSessionData();
+}
+
+// Inisialisasi Firebase
 function initFirebase() {
+  loadLocalFallback();
+
   try {
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
     firebaseDb = firebase.database();
     
-    document.getElementById('statusDot').className = 'status-dot status-online';
-    document.getElementById('statusText').innerText = 'Firebase Online';
-    document.getElementById('firebaseStatusBadge').className = 'badge bg-success d-flex align-items-center py-2 px-3';
+    // Deteksi koneksi aktif Firebase
+    const connectedRef = firebaseDb.ref(".info/connected");
+    connectedRef.on("value", (snap) => {
+      if (snap.val() === true) {
+        document.getElementById('statusDot').className = 'status-dot status-online';
+        document.getElementById('statusText').innerText = 'Firebase Online';
+        document.getElementById('firebaseStatusBadge').className = 'badge bg-success d-flex align-items-center py-2 px-3';
+      } else {
+        document.getElementById('statusDot').className = 'status-dot status-offline';
+        document.getElementById('statusText').innerText = 'Mode Lokal';
+        document.getElementById('firebaseStatusBadge').className = 'badge bg-warning text-dark d-flex align-items-center py-2 px-3';
+      }
+    });
 
     listenToFirebaseSessions();
   } catch(e) {
-    console.error("Firebase Error:", e);
-    document.getElementById('statusDot').className = 'status-dot status-offline';
-    document.getElementById('statusText').innerText = 'Mode Lokal';
-    loadLocalSessions();
+    console.error("Firebase init failed, running locally:", e);
   }
 }
 
@@ -544,9 +567,12 @@ function listenToFirebaseSessions() {
       seedInitialFirebaseData();
     } else {
       allSessions = data;
+      localStorage.setItem('LBS_LOCAL_SESSIONS', JSON.stringify(allSessions));
       updateSessionDropdown();
       loadCurrentSessionData();
     }
+  }, (err) => {
+    console.warn("Firebase listener notice:", err);
   });
 }
 
@@ -561,25 +587,15 @@ function seedInitialFirebaseData() {
   firebaseDb.ref('inventory_sessions').set(initialData);
 }
 
-function loadLocalSessions() {
-  allSessions = JSON.parse(localStorage.getItem('LBS_LOCAL_SESSIONS')) || {
-    [currentSessionKey]: {
-      docNomor: currentDocNomor,
-      tanggal: "Senin, 31 Agustus 2026",
-      items: defaultItemsTemplate
-    }
-  };
-  updateSessionDropdown();
-  loadCurrentSessionData();
-}
-
 function persistSession(sessionKey, sessionData) {
+  allSessions[sessionKey] = sessionData;
+  localStorage.setItem('LBS_LOCAL_SESSIONS', JSON.stringify(allSessions));
+  renderAll();
+
   if (firebaseDb) {
-    firebaseDb.ref('inventory_sessions/' + sessionKey).set(sessionData);
-  } else {
-    allSessions[sessionKey] = sessionData;
-    localStorage.setItem('LBS_LOCAL_SESSIONS', JSON.stringify(allSessions));
-    renderAll();
+    firebaseDb.ref('inventory_sessions/' + sessionKey).set(sessionData).catch(err => {
+      console.warn("Failed syncing to Firebase, saved locally:", err);
+    });
   }
 }
 
@@ -607,10 +623,10 @@ function loadCurrentSessionData() {
   if (allSessions[currentSessionKey]) {
     const sess = allSessions[currentSessionKey];
     currentItems = sess.items || [];
-    currentDocNomor = sess.docNomor || "";
+    currentDocNomor = sess.docNomor || "008/KEU/OPNAME/LBS/AGUST/2026";
     document.getElementById('docNomor').value = currentDocNomor;
   } else {
-    currentItems = [];
+    currentItems = JSON.parse(JSON.stringify(defaultItemsTemplate));
   }
   renderAll();
 }
@@ -622,7 +638,7 @@ function promptNewSession() {
   if (!dateInput) return;
 
   if (allSessions[dateInput]) {
-    alert("Sesi tanggal ini sudah ada!");
+    alert("Sesi tanggal ini sudah ada! Membuka sesi yang sudah ada.");
     currentSessionKey = dateInput;
     loadCurrentSessionData();
     return;
@@ -682,8 +698,8 @@ function renderInventoryTable() {
         </td>
         <td class="text-center">
           <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-dark" onclick="showBarcodeModal(${idx})" title="Cetak Barcode"><i class="bi bi-qr-code"></i></button>
-            <button class="btn btn-outline-danger" onclick="deleteItem(${idx})" title="Hapus"><i class="bi bi-trash"></i></button>
+            <button class="btn btn-outline-dark" type="button" onclick="showBarcodeModal(${idx})" title="Cetak Barcode"><i class="bi bi-qr-code"></i></button>
+            <button class="btn btn-outline-danger" type="button" onclick="deleteItem(${idx})" title="Hapus"><i class="bi bi-trash"></i></button>
           </div>
         </td>
       </tr>
@@ -832,22 +848,7 @@ function renderLaporan() {
   flushSubtotal();
 }
 
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playBeep() {
-  try {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.15);
-  } catch(e) {}
-}
-
+// Scanner Logik
 const scanInput = document.getElementById('barcodeScannerInput');
 scanInput.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') {
@@ -889,7 +890,6 @@ function processBarcodeSearch(rawCode) {
   const idx = currentItems.findIndex(i => i.barcode.trim().toLowerCase() === cleanCode.toLowerCase());
 
   if (idx !== -1) {
-    playBeep();
     const item = currentItems[idx];
     alertBox.className = "alert alert-success";
     alertBox.innerHTML = `<i class="bi bi-check-circle-fill me-2 fs-5"></i> DITEMUKAN: <b>${item.kategori}</b> — ${item.size} (${item.barcode})`;
@@ -952,7 +952,7 @@ document.getElementById('formOpnameUpdate').addEventListener('submit', function(
   allSessions[currentSessionKey].items = currentItems;
   persistSession(currentSessionKey, allSessions[currentSessionKey]);
 
-  alert(`Opname tersimpan & tersinkronisasi realtime ke semua perangkat!`);
+  alert(`Hasil opname berhasil disimpan!`);
   resetOpnameForm();
 });
 
@@ -987,7 +987,7 @@ document.getElementById('formTambahProdukBaru').addEventListener('submit', funct
   allSessions[currentSessionKey].items = currentItems;
   persistSession(currentSessionKey, allSessions[currentSessionKey]);
 
-  alert('Item baru berhasil ditambahkan ke database realtime!');
+  alert('Item baru berhasil ditambahkan!');
   this.reset();
   bootstrap.Modal.getInstance(document.getElementById('modalTambahProduk')).hide();
 });
@@ -1019,160 +1019,179 @@ function printBarcodeLabel() {
   location.reload();
 }
 
+// FUNGSI UNDUH EXCEL RESMI
 function exportToExcel() {
-  const sess = allSessions[currentSessionKey] || {};
-  const docNo = sess.docNomor || currentDocNomor;
-  const docDate = sess.tanggal || currentSessionKey;
+  try {
+    const sess = allSessions[currentSessionKey] || {};
+    const docNo = sess.docNomor || currentDocNomor;
+    const docDate = sess.tanggal || currentSessionKey;
 
-  const aoa = [
-    ["No : " + docNo],
-    ["Date : " + docDate],
-    [],
-    ["BERITA ACARA STOK OPNAME COLD STORAGE"],
-    [],
-    [`Pada hari ini, ${docDate}, bertempat di PT. Lampung Bay Seafood dengan alamat Jl. Raya Tanjung Bintang No. 101 Desa Serdang, Kec. Tanjung Bintang- Lampung Selatan. Telah dilakukan stok opname Cold Storage, berdasarkan opname yang dilakukan terdiri dari :`],
-    [],
-    ["NO", "NAMA BARANG", "SIZE", "STOCK QTY", "UNIT", "STOCK LBS", "UNIT", "OPNAME QTY", "UNIT", "OPNAME LBS", "UNIT", "SELISIH QTY", "UNIT", "SELISIH LBS", "UNIT", "KODE PRODUKSI", "KETERANGAN"]
-  ];
+    const exportData = currentItems.length ? currentItems : defaultItemsTemplate;
 
-  let currentCat = '';
-  let sqTotal = 0, slTotal = 0, oqTotal = 0, olTotal = 0, unitCat = 'Mc', rowNum = 1;
+    const aoa = [
+      ["No : " + docNo],
+      ["Date : " + docDate],
+      [],
+      ["BERITA ACARA STOK OPNAME COLD STORAGE"],
+      [],
+      [`Pada hari ini, ${docDate}, bertempat di PT. Lampung Bay Seafood dengan alamat Jl. Raya Tanjung Bintang No. 101 Desa Serdang, Kec. Tanjung Bintang- Lampung Selatan. Telah dilakukan stok opname Cold Storage, berdasarkan opname yang dilakukan terdiri dari :`],
+      [],
+      ["NO", "NAMA BARANG", "SIZE", "STOCK QTY", "UNIT", "STOCK LBS", "UNIT", "OPNAME QTY", "UNIT", "OPNAME LBS", "UNIT", "SELISIH QTY", "UNIT", "SELISIH LBS", "UNIT", "KODE PRODUKSI", "KETERANGAN"]
+    ];
 
-  function flushExcelSub() {
-    if (currentCat) {
-      const dq = oqTotal - sqTotal;
-      const dl = olTotal - slTotal;
-      aoa.push(["", `Total ${currentCat}`, "", sqTotal||"-", unitCat, slTotal||"-", "Lbs", oqTotal||"-", unitCat, olTotal||"-", "Lbs", dq!==0?dq:"-", unitCat, dl!==0?dl:"-", "Lbs", "", ""]);
+    let currentCat = '';
+    let sqTotal = 0, slTotal = 0, oqTotal = 0, olTotal = 0, unitCat = 'Mc', rowNum = 1;
+
+    function flushExcelSub() {
+      if (currentCat) {
+        const dq = oqTotal - sqTotal;
+        const dl = olTotal - slTotal;
+        aoa.push(["", `Total ${currentCat}`, "", sqTotal||"-", unitCat, slTotal||"-", "Lbs", oqTotal||"-", unitCat, olTotal||"-", "Lbs", dq!==0?dq:"-", unitCat, dl!==0?dl:"-", "Lbs", "", ""]);
+      }
     }
+
+    exportData.forEach(item => {
+      if (item.kategori !== currentCat) {
+        flushExcelSub();
+        currentCat = item.kategori;
+        sqTotal = 0; slTotal = 0; oqTotal = 0; olTotal = 0;
+        unitCat = item.unit; rowNum = 1;
+      }
+      const sq = Number(item.sysQty) || 0;
+      const sl = Number(item.sysLbs) || 0;
+      const oq = Number(item.opQty) || 0;
+      const ol = Number(item.opLbs) || 0;
+      sqTotal += sq; slTotal += sl; oqTotal += oq; olTotal += ol;
+
+      aoa.push([rowNum++, item.kategori, item.size, sq||"-", item.unit, sl||"-", "Lbs", oq||"-", item.unit, ol||"-", "Lbs", (oq-sq)!==0?(oq-sq):"-", item.unit, (ol-sl)!==0?(ol-sl):"-", "Lbs", item.kodeProduksi||"-", item.ket||""]);
+    });
+    flushExcelSub();
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Stok Opname");
+    XLSX.writeFile(wb, `Berita_Acara_Opname_${currentSessionKey}.xlsx`);
+  } catch(err) {
+    alert("Gagal mengunduh Excel: " + err.message);
   }
-
-  currentItems.forEach(item => {
-    if (item.kategori !== currentCat) {
-      flushExcelSub();
-      currentCat = item.kategori;
-      sqTotal = 0; slTotal = 0; oqTotal = 0; olTotal = 0;
-      unitCat = item.unit; rowNum = 1;
-    }
-    const sq = Number(item.sysQty) || 0;
-    const sl = Number(item.sysLbs) || 0;
-    const oq = Number(item.opQty) || 0;
-    const ol = Number(item.opLbs) || 0;
-    sqTotal += sq; slTotal += sl; oqTotal += oq; olTotal += ol;
-
-    aoa.push([rowNum++, item.kategori, item.size, sq||"-", item.unit, sl||"-", "Lbs", oq||"-", item.unit, ol||"-", "Lbs", (oq-sq)!==0?(oq-sq):"-", item.unit, (ol-sl)!==0?(ol-sl):"-", "Lbs", item.kodeProduksi||"-", item.ket||""]);
-  });
-  flushExcelSub();
-
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Stok Opname");
-  XLSX.writeFile(wb, `Berita_Acara_Opname_${currentSessionKey}.xlsx`);
 }
 
+// FUNGSI UNDUH PDF RESMI
 function exportToPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('l', 'pt', 'a4');
-  const sess = allSessions[currentSessionKey] || {};
-  const docNo = sess.docNomor || currentDocNomor;
-  const docDate = sess.tanggal || currentSessionKey;
+  try {
+    const jsPDFClass = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+    if (!jsPDFClass) {
+      alert("Pustaka PDF sedang dimuat, silakan coba 2 detik lagi.");
+      return;
+    }
 
-  doc.setFontSize(9);
-  doc.text(`No   : ${docNo}`, 40, 30);
-  doc.text(`Date : ${docDate}`, 40, 42);
+    const doc = new jsPDFClass('l', 'pt', 'a4');
+    const sess = allSessions[currentSessionKey] || {};
+    const docNo = sess.docNomor || currentDocNomor;
+    const docDate = sess.tanggal || currentSessionKey;
 
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.text("BERITA ACARA STOK OPNAME COLD STORAGE", doc.internal.pageSize.getWidth() / 2, 60, { align: "center" });
+    const exportData = currentItems.length ? currentItems : defaultItemsTemplate;
 
-  doc.setFontSize(8.5);
-  doc.setFont("helvetica", "normal");
-  const introText = `Pada hari ini, ${docDate}, bertempat di PT. Lampung Bay Seafood dengan alamat Jl. Raya Tanjung Bintang No. 101 Desa Serdang, Kec. Tanjung Bintang- Lampung Selatan. Telah dilakukan stok opname Cold Storage, berdasarkan opname yang dilakukan terdiri dari :`;
-  const splitIntro = doc.splitTextToSize(introText, doc.internal.pageSize.getWidth() - 80);
-  doc.text(splitIntro, 40, 80);
+    doc.setFontSize(9);
+    doc.text(`No   : ${docNo}`, 40, 30);
+    doc.text(`Date : ${docDate}`, 40, 42);
 
-  const tableRows = [];
-  let currentCat = '', sqTotal = 0, slTotal = 0, oqTotal = 0, olTotal = 0, dqTotal = 0, dlTotal = 0, unitCat = 'Mc', rowNum = 1;
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("BERITA ACARA STOK OPNAME COLD STORAGE", doc.internal.pageSize.getWidth() / 2, 60, { align: "center" });
 
-  function flushPdfSub() {
-    if (currentCat) {
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    const introText = `Pada hari ini, ${docDate}, bertempat di PT. Lampung Bay Seafood dengan alamat Jl. Raya Tanjung Bintang No. 101 Desa Serdang, Kec. Tanjung Bintang- Lampung Selatan. Telah dilakukan stok opname Cold Storage, berdasarkan opname yang dilakukan terdiri dari :`;
+    const splitIntro = doc.splitTextToSize(introText, doc.internal.pageSize.getWidth() - 80);
+    doc.text(splitIntro, 40, 80);
+
+    const tableRows = [];
+    let currentCat = '', sqTotal = 0, slTotal = 0, oqTotal = 0, olTotal = 0, dqTotal = 0, dlTotal = 0, unitCat = 'Mc', rowNum = 1;
+
+    function flushPdfSub() {
+      if (currentCat) {
+        tableRows.push([
+          { content: `Total ${currentCat}`, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [240, 245, 255] } },
+          { content: sqTotal ? sqTotal.toLocaleString('id-ID') : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: unitCat, styles: { fontStyle: 'bold', halign: 'center' } },
+          { content: slTotal ? slTotal.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: "Lbs", styles: { fontStyle: 'bold', halign: 'center' } },
+          { content: oqTotal ? oqTotal.toLocaleString('id-ID') : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: unitCat, styles: { fontStyle: 'bold', halign: 'center' } },
+          { content: olTotal ? olTotal.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: "Lbs", styles: { fontStyle: 'bold', halign: 'center' } },
+          { content: dqTotal !== 0 ? dqTotal.toString() : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: unitCat, styles: { fontStyle: 'bold', halign: 'center' } },
+          { content: dlTotal !== 0 ? dlTotal.toFixed(1) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: "Lbs", styles: { fontStyle: 'bold', halign: 'center' } },
+          { content: "", styles: { fontStyle: 'bold' } }
+        ]);
+      }
+    }
+
+    exportData.forEach(item => {
+      if (item.kategori !== currentCat) {
+        flushPdfSub();
+        currentCat = item.kategori;
+        sqTotal = 0; slTotal = 0; oqTotal = 0; olTotal = 0; dqTotal = 0; dlTotal = 0;
+        unitCat = item.unit; rowNum = 1;
+      }
+      const sq = Number(item.sysQty) || 0;
+      const sl = Number(item.sysLbs) || 0;
+      const oq = Number(item.opQty) || 0;
+      const ol = Number(item.opLbs) || 0;
+      const dq = oq - sq;
+      const dl = ol - sl;
+      sqTotal += sq; slTotal += sl; oqTotal += oq; olTotal += ol; dqTotal += dq; dlTotal += dl;
+
       tableRows.push([
-        { content: `Total ${currentCat}`, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [240, 245, 255] } },
-        { content: sqTotal ? sqTotal.toLocaleString('id-ID') : '-', styles: { fontStyle: 'bold', halign: 'right' } },
-        { content: unitCat, styles: { fontStyle: 'bold', halign: 'center' } },
-        { content: slTotal ? slTotal.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
-        { content: "Lbs", styles: { fontStyle: 'bold', halign: 'center' } },
-        { content: oqTotal ? oqTotal.toLocaleString('id-ID') : '-', styles: { fontStyle: 'bold', halign: 'right' } },
-        { content: unitCat, styles: { fontStyle: 'bold', halign: 'center' } },
-        { content: olTotal ? olTotal.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
-        { content: "Lbs", styles: { fontStyle: 'bold', halign: 'center' } },
-        { content: dqTotal !== 0 ? dqTotal.toString() : '-', styles: { fontStyle: 'bold', halign: 'right' } },
-        { content: unitCat, styles: { fontStyle: 'bold', halign: 'center' } },
-        { content: dlTotal !== 0 ? dlTotal.toFixed(1) : '-', styles: { fontStyle: 'bold', halign: 'right' } },
-        { content: "Lbs", styles: { fontStyle: 'bold', halign: 'center' } },
-        { content: "", styles: { fontStyle: 'bold' } }
+        { content: rowNum++.toString(), styles: { halign: 'center' } },
+        `${item.kategori} ${item.size}`,
+        { content: sq ? sq.toLocaleString('id-ID') : '-', styles: { halign: 'right' } },
+        { content: item.unit, styles: { halign: 'center' } },
+        { content: sl ? sl.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { halign: 'right' } },
+        { content: "Lbs", styles: { halign: 'center' } },
+        { content: oq ? oq.toLocaleString('id-ID') : '-', styles: { halign: 'right' } },
+        { content: item.unit, styles: { halign: 'center' } },
+        { content: ol ? ol.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { halign: 'right' } },
+        { content: "Lbs", styles: { halign: 'center' } },
+        { content: dq !== 0 ? dq.toString() : '-', styles: { halign: 'right', textColor: dq !== 0 ? [220, 53, 69] : [0,0,0] } },
+        { content: item.unit, styles: { halign: 'center' } },
+        { content: dl !== 0 ? dl.toFixed(1) : '-', styles: { halign: 'right', textColor: dl !== 0 ? [220, 53, 69] : [0,0,0] } },
+        { content: "Lbs", styles: { halign: 'center' } },
+        item.ket || ""
       ]);
-    }
-  }
+    });
+    flushPdfSub();
 
-  currentItems.forEach(item => {
-    if (item.kategori !== currentCat) {
-      flushPdfSub();
-      currentCat = item.kategori;
-      sqTotal = 0; slTotal = 0; oqTotal = 0; olTotal = 0; dqTotal = 0; dlTotal = 0;
-      unitCat = item.unit; rowNum = 1;
-    }
-    const sq = Number(item.sysQty) || 0;
-    const sl = Number(item.sysLbs) || 0;
-    const oq = Number(item.opQty) || 0;
-    const ol = Number(item.opLbs) || 0;
-    const dq = oq - sq;
-    const dl = ol - sl;
-    sqTotal += sq; slTotal += sl; oqTotal += oq; olTotal += ol; dqTotal += dq; dlTotal += dl;
-
-    tableRows.push([
-      { content: rowNum++.toString(), styles: { halign: 'center' } },
-      `${item.kategori} ${item.size}`,
-      { content: sq ? sq.toLocaleString('id-ID') : '-', styles: { halign: 'right' } },
-      { content: item.unit, styles: { halign: 'center' } },
-      { content: sl ? sl.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { halign: 'right' } },
-      { content: "Lbs", styles: { halign: 'center' } },
-      { content: oq ? oq.toLocaleString('id-ID') : '-', styles: { halign: 'right' } },
-      { content: item.unit, styles: { halign: 'center' } },
-      { content: ol ? ol.toLocaleString('id-ID', {maximumFractionDigits:2}) : '-', styles: { halign: 'right' } },
-      { content: "Lbs", styles: { halign: 'center' } },
-      { content: dq !== 0 ? dq.toString() : '-', styles: { halign: 'right', textColor: dq !== 0 ? [220, 53, 69] : [0,0,0] } },
-      { content: item.unit, styles: { halign: 'center' } },
-      { content: dl !== 0 ? dl.toFixed(1) : '-', styles: { halign: 'right', textColor: dl !== 0 ? [220, 53, 69] : [0,0,0] } },
-      { content: "Lbs", styles: { halign: 'center' } },
-      item.ket || ""
-    ]);
-  });
-  flushPdfSub();
-
-  doc.autoTable({
-    startY: 105,
-    margin: { left: 30, right: 30 },
-    theme: 'grid',
-    styles: { fontSize: 7, cellPadding: 2.5, valign: 'middle' },
-    headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
-    head: [
-      [
-        { content: 'NO', rowSpan: 2 },
-        { content: 'NAMA BARANG', rowSpan: 2 },
-        { content: 'STOCK INVENTORY', colSpan: 4 },
-        { content: 'OPNAME', colSpan: 4 },
-        { content: 'SELISIH', colSpan: 4 },
-        { content: 'KETERANGAN', rowSpan: 2 }
+    doc.autoTable({
+      startY: 105,
+      margin: { left: 30, right: 30 },
+      theme: 'grid',
+      styles: { fontSize: 7, cellPadding: 2.5, valign: 'middle' },
+      headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+      head: [
+        [
+          { content: 'NO', rowSpan: 2 },
+          { content: 'NAMA BARANG', rowSpan: 2 },
+          { content: 'STOCK INVENTORY', colSpan: 4 },
+          { content: 'OPNAME', colSpan: 4 },
+          { content: 'SELISIH', colSpan: 4 },
+          { content: 'KETERANGAN', rowSpan: 2 }
+        ],
+        ['QTY', 'UNIT', 'LBS', 'UNIT', 'QTY', 'UNIT', 'LBS', 'UNIT', 'QTY', 'UNIT', 'LBS', 'UNIT']
       ],
-      ['QTY', 'UNIT', 'LBS', 'UNIT', 'QTY', 'UNIT', 'LBS', 'UNIT', 'QTY', 'UNIT', 'LBS', 'UNIT']
-    ],
-    body: tableRows
-  });
+      body: tableRows
+    });
 
-  doc.save(`Berita_Acara_Opname_${currentSessionKey}.pdf`);
+    doc.save(`Berita_Acara_Opname_${currentSessionKey}.pdf`);
+  } catch(err) {
+    alert("Gagal mengunduh PDF: " + err.message);
+  }
 }
 
-// Inisialisasi otomatis
+// Jalankan sistem
 initFirebase();
 </script>
 
