@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PT LAMPUNG BAY SEAFOOD - Sistem Inventory Cold Storage</title>
+  <title>PT LAMPUNG BAY SEAFOOD - Inventory & Cold Storage</title>
   
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,28 +12,26 @@
   <!-- SheetJS & jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   
-  <!-- JsBarcode & Html5-QRCode -->
+  <!-- JsBarcode & Html5-QRCode (Kamera Barcode HP) -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
 
-  <!-- Firebase SDK Standar v8 -->
+  <!-- Firebase SDK Standar v8 (Paling Stabil di Semua Device) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <style>
-    body { background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; }
+    body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #0f172a; }
     .navbar-brand { font-weight: 700; letter-spacing: 0.5px; }
     .card-metric { border-radius: 10px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     .badge-code { font-family: monospace; font-size: 0.88rem; background: #e2e8f0; color: #0f172a; padding: 4px 8px; border-radius: 4px; }
     .nav-tabs .nav-link { font-weight: 600; color: #475569; padding: 12px 18px; border: none; border-bottom: 3px solid transparent; }
     .nav-tabs .nav-link.active { color: #0284c7; background: transparent; border-bottom: 3px solid #0284c7; }
-    .admin-only { display: block; }
-    body.is-operator .admin-only { display: none !important; }
     .scanner-box { border: 2px dashed #0284c7; background-color: #f0f9ff; padding: 16px; border-radius: 10px; }
-    #reader { width: 100%; max-width: 420px; margin: 0 auto; border-radius: 8px; overflow: hidden; }
-    .table-subtotal { background-color: #f1f5f9; font-weight: bold; }
+    #reader { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 8px; overflow: hidden; }
+    .table-subtotal { background-color: #f8fafc; font-weight: bold; }
     .diff-plus { color: #16a34a; font-weight: bold; }
     .diff-minus { color: #dc2626; font-weight: bold; }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
@@ -43,7 +41,7 @@
 </head>
 <body class="is-admin">
 
-<!-- Top Header Navbar -->
+<!-- Navbar Utama -->
 <nav class="navbar navbar-dark bg-dark px-3 py-2 shadow-sm border-bottom border-primary border-3">
   <div class="container-fluid">
     <span class="navbar-brand mb-0 h1 d-flex align-items-center">
@@ -51,14 +49,12 @@
       PT LAMPUNG BAY SEAFOOD
     </span>
     
-    <div class="d-flex align-items-center gap-3">
-      <!-- Status Database -->
+    <div class="d-flex align-items-center gap-2">
       <span class="badge bg-secondary d-flex align-items-center py-2 px-3" id="dbStatusBadge">
         <span class="status-dot status-offline" id="statusDot"></span>
         <span id="statusText">Menghubungkan...</span>
       </span>
 
-      <!-- Role Switcher Panel: Admin vs Operator -->
       <div class="btn-group shadow-sm" role="group">
         <button type="button" class="btn btn-sm btn-primary active" id="btnRoleAdmin" onclick="setRole('admin')">
           <i class="bi bi-shield-lock-fill me-1"></i> Admin
@@ -71,28 +67,17 @@
   </div>
 </nav>
 
-<!-- Main Container -->
 <div class="container-fluid py-3 px-md-4">
 
-  <!-- Role Notice Banner -->
-  <div class="alert alert-info py-2 px-3 d-flex justify-content-between align-items-center mb-3 shadow-sm" id="roleBanner">
-    <div>
-      <span class="badge bg-primary me-2" id="currentRoleText">MODE: ADMIN</span>
-      <small id="roleDescText">Akses penuh: Edit master stok, kode produksi, tambah produk baru, buat sesi opname, dan unduh laporan.</small>
-    </div>
-    <button class="btn btn-sm btn-outline-dark" type="button" onclick="toggleRoleQuick()"><i class="bi bi-arrow-repeat me-1"></i> Ganti Peran</button>
-  </div>
-
-  <!-- Session & Date Selector Bar -->
+  <!-- Baris Kontrol: Sesi Tanggal & Tombol Download -->
   <div class="card shadow-sm border-0 mb-3 bg-white">
     <div class="card-body py-2 px-3">
       <div class="row align-items-center g-2">
         <div class="col-md-5">
-          <label class="small fw-bold text-muted mb-0"><i class="bi bi-calendar-check me-1"></i> Sesi Tanggal Opname (Buka Data Lama / Hari Ini):</label>
+          <label class="small fw-bold text-muted mb-0"><i class="bi bi-calendar-check me-1"></i> Sesi Tanggal Opname / Buka Data Lama:</label>
           <div class="input-group input-group-sm mt-1">
-            <select id="selectSession" class="form-select fw-bold text-primary" onchange="switchSession(this.value)">
-            </select>
-            <button class="btn btn-outline-primary admin-only" type="button" onclick="promptNewSession()"><i class="bi bi-plus-circle me-1"></i> Buat Sesi Baru</button>
+            <select id="selectSession" class="form-select fw-bold text-primary" onchange="switchSession(this.value)"></select>
+            <button class="btn btn-outline-primary" type="button" onclick="promptNewSession()"><i class="bi bi-plus-circle me-1"></i> Buat Sesi Baru</button>
           </div>
         </div>
 
@@ -102,23 +87,23 @@
         </div>
 
         <div class="col-md-3 text-md-end pt-md-3">
-          <button class="btn btn-success btn-sm me-1 shadow-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Download Excel</button>
-          <button class="btn btn-danger btn-sm shadow-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Download PDF</button>
+          <button class="btn btn-success btn-sm me-1 shadow-sm" type="button" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Excel</button>
+          <button class="btn btn-danger btn-sm shadow-sm" type="button" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> PDF</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Persistent Main Navigation Tabs -->
+  <!-- Menu Tab Utama -->
   <ul class="nav nav-tabs mb-3 bg-white rounded-top shadow-sm px-2 pt-1" id="mainTab" role="tablist">
     <li class="nav-item">
       <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabOpname" type="button">
-        <i class="bi bi-upc-scan text-warning me-1"></i> Scan Barcode & Opname
+        <i class="bi bi-upc-scan text-warning me-1"></i> Scan Barcode & Update Stok
       </button>
     </li>
     <li class="nav-item">
       <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabDashboard" type="button">
-        <i class="bi bi-speedometer2 text-primary me-1"></i> Dashboard Sesi
+        <i class="bi bi-speedometer2 text-primary me-1"></i> Dashboard Ringkasan
       </button>
     </li>
     <li class="nav-item">
@@ -133,28 +118,28 @@
     </li>
   </ul>
 
-  <!-- Tab Contents -->
+  <!-- Konten Tab -->
   <div class="tab-content" id="mainTabContent">
 
-    <!-- TAB 1: SCAN BARCODE & OPNAME -->
+    <!-- TAB 1: SCAN BARCODE & UPDATE STOK -->
     <div class="tab-pane fade show active" id="tabOpname">
       <div class="row g-3">
         <div class="col-lg-5">
           <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
-              <span><i class="bi bi-upc-scan me-2"></i>Area Scan Barcode</span>
-              <span class="badge bg-light text-primary"><i class="bi bi-broadcast"></i> Scanner Ready</span>
+              <span><i class="bi bi-upc-scan me-2"></i>Scanner Barcode</span>
+              <span class="badge bg-light text-primary"><i class="bi bi-phone"></i> Siap Pakai di HP</span>
             </div>
             <div class="card-body">
               <ul class="nav nav-pills nav-fill mb-3" role="tablist">
                 <li class="nav-item">
                   <button class="nav-link active py-2" data-bs-toggle="pill" data-bs-target="#subGunScan" type="button">
-                    <i class="bi bi-upc"></i> Scanner Tembak / Input
+                    <i class="bi bi-upc"></i> Scanner Tembak / Ketik
                   </button>
                 </li>
                 <li class="nav-item">
                   <button class="nav-link py-2" data-bs-toggle="pill" data-bs-target="#subCamScan" type="button" onclick="initCamera()">
-                    <i class="bi bi-camera"></i> Kamera HP / Laptop
+                    <i class="bi bi-camera"></i> Kamera HP
                   </button>
                 </li>
               </ul>
@@ -162,8 +147,7 @@
               <div class="tab-content">
                 <div class="tab-pane fade show active" id="subGunScan">
                   <div class="scanner-box mb-3">
-                    <label class="form-label fw-bold text-primary mb-1">Tembak Barcode Kemasan:</label>
-                    <p class="small text-muted mb-2">Arahkan scanner tembak USB/Bluetooth atau ketik kode barcode di sini:</p>
+                    <label class="form-label fw-bold text-primary mb-1">Tembak / Input Barcode:</label>
                     <div class="input-group">
                       <span class="input-group-text"><i class="bi bi-upc fs-5"></i></span>
                       <input type="text" id="barcodeScannerInput" class="form-control form-control-lg fw-bold" placeholder="Scan barcode..." autofocus>
@@ -175,10 +159,10 @@
                 <div class="tab-pane fade" id="subCamScan">
                   <div class="text-center mb-3">
                     <div id="reader"></div>
-                    <small class="text-muted d-block mt-2">Arahkan kamera HP ke label barcode box/bag</small>
+                    <small class="text-muted d-block mt-2">Arahkan kamera HP ke barcode kemasan produk</small>
                     <div class="mt-2">
-                      <button class="btn btn-sm btn-outline-danger" type="button" onclick="stopCamera()"><i class="bi bi-camera-video-off"></i> Matikan</button>
-                      <button class="btn btn-sm btn-outline-primary" type="button" onclick="initCamera()"><i class="bi bi-arrow-clockwise"></i> Reset</button>
+                      <button class="btn btn-sm btn-outline-danger" type="button" onclick="stopCamera()"><i class="bi bi-camera-video-off"></i> Tutup Kamera</button>
+                      <button class="btn btn-sm btn-outline-primary" type="button" onclick="initCamera()"><i class="bi bi-arrow-clockwise"></i> Reset Kamera</button>
                     </div>
                   </div>
                 </div>
@@ -187,7 +171,7 @@
               <div id="scanStatusAlert" class="alert alert-info d-none mb-3"></div>
 
               <div class="p-3 bg-light rounded border">
-                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Shortcut Tes Barcode:</h6>
+                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">Shortcut Uji Coba Cepat:</h6>
                 <div class="d-flex flex-wrap gap-1">
                   <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('SLP-01')">SLP-01</button>
                   <button type="button" class="btn btn-sm btn-outline-secondary" onclick="processBarcodeSearch('GRP-04')">GRP-04</button>
@@ -202,15 +186,35 @@
 
         <div class="col-lg-7">
           <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-success text-white fw-bold">
-              <i class="bi bi-pencil-square me-2"></i>Form Input Hitungan Fisik Cold Storage
+            <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
+              <span><i class="bi bi-pencil-square me-2"></i>Form Input & Update Stok</span>
+              <span class="badge bg-light text-success" id="actionModeBadge">Mode: Opname Fisik</span>
             </div>
             <div class="card-body">
               <form id="formOpnameUpdate">
                 <input type="hidden" id="opnameItemIndex">
+                
                 <div class="mb-3">
                   <label class="form-label fw-bold">Barang Terpilih</label>
                   <input type="text" id="opnameNamaDisplay" class="form-control form-control-lg bg-light fw-bold text-primary" readonly placeholder="Scan barcode terlebih dahulu...">
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-bold">Pilih Jenis Update Stok:</label>
+                  <div class="d-flex gap-3 p-2 bg-light rounded border">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="updateActionType" id="actOpname" value="opname" checked onchange="toggleActionType()">
+                      <label class="form-check-label fw-bold" for="actOpname">
+                        <i class="bi bi-clipboard-check text-primary"></i> Stock Opname (Ganti Hitungan Real)
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="updateActionType" id="actTambah" value="tambah" onchange="toggleActionType()">
+                      <label class="form-check-label fw-bold" for="actTambah">
+                        <i class="bi bi-plus-circle-fill text-success"></i> Tambah Stok Masuk (+ Qty)
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="row">
@@ -226,33 +230,33 @@
 
                 <div class="row p-3 bg-light rounded border mx-0 mb-3">
                   <div class="col-md-6 border-end">
-                    <h6 class="text-primary fw-bold mb-2"><i class="bi bi-database"></i> Stok Sistem</h6>
+                    <h6 class="text-primary fw-bold mb-2"><i class="bi bi-database"></i> Stok Tercatat Sistem</h6>
                     <div class="mb-2">
-                      <label class="small text-muted">Stok Sistem (Qty)</label>
+                      <label class="small text-muted">Stok Qty</label>
                       <input type="number" id="opnameSysQty" class="form-control" readonly>
                     </div>
                     <div>
-                      <label class="small text-muted">Berat Sistem (Lbs)</label>
+                      <label class="small text-muted">Berat (Lbs)</label>
                       <input type="number" step="any" id="opnameSysLbs" class="form-control" readonly>
                     </div>
                   </div>
 
                   <div class="col-md-6">
-                    <h6 class="text-success fw-bold mb-2"><i class="bi bi-check2-circle"></i> Hitungan Fisik Aktual</h6>
+                    <h6 class="text-success fw-bold mb-2" id="inputSectionTitle"><i class="bi bi-check2-circle"></i> Hitungan Fisik Opname</h6>
                     <div class="mb-2">
-                      <label class="small text-muted fw-bold">Hitungan Fisik (Qty/Box/Bag)</label>
-                      <input type="number" id="opnameRealQty" class="form-control border-success fw-bold text-success" placeholder="Hitungan aktual" required>
+                      <label class="small text-muted fw-bold" id="lblInputQty">Jumlah Fisik (Qty/Box/Bag)</label>
+                      <input type="number" id="opnameRealQty" class="form-control border-success fw-bold text-success" placeholder="Masukkan jumlah" required>
                     </div>
                     <div>
-                      <label class="small text-muted fw-bold">Hitungan Berat Fisik (Lbs)</label>
-                      <input type="number" step="any" id="opnameRealLbs" class="form-control border-success fw-bold text-success" placeholder="Berat aktual" required>
+                      <label class="small text-muted fw-bold" id="lblInputLbs">Berat Fisik (Lbs)</label>
+                      <input type="number" step="any" id="opnameRealLbs" class="form-control border-success fw-bold text-success" placeholder="Masukkan berat" required>
                     </div>
                   </div>
                 </div>
 
                 <div class="d-flex justify-content-end gap-2">
                   <button type="button" class="btn btn-secondary" onclick="resetOpnameForm()">Reset</button>
-                  <button type="submit" class="btn btn-success px-4"><i class="bi bi-cloud-arrow-up me-1"></i> Simpan Hasil Opname</button>
+                  <button type="submit" class="btn btn-success px-4" id="btnSimpanUpdate"><i class="bi bi-cloud-arrow-up me-1"></i> Simpan ke Database</button>
                 </div>
               </form>
             </div>
@@ -321,9 +325,9 @@
           <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
               <h5 class="card-title fw-bold mb-0">Data Stok & Barcode Master</h5>
-              <small class="text-muted" id="masterDesc">Mode Admin: Anda dapat mengedit stok, kode produksi, dan menambah item.</small>
+              <small class="text-muted" id="masterDesc">Anda dapat langsung menambah stok masuk, mengubah angka, dan mencetak barcode.</small>
             </div>
-            <button class="btn btn-primary btn-sm admin-only" type="button" data-bs-toggle="modal" data-bs-target="#modalTambahProduk">
+            <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#modalTambahProduk">
               <i class="bi bi-plus-circle me-1"></i> Tambah Produk / Size Baru
             </button>
           </div>
@@ -337,10 +341,10 @@
                   <th>Nama Barang & Size</th>
                   <th>Unit</th>
                   <th>Kode Produksi</th>
-                  <th class="text-end" style="width: 110px;">Stok Qty</th>
-                  <th class="text-end" style="width: 120px;">Berat (Lbs)</th>
+                  <th class="text-end" style="width: 100px;">Stok Qty</th>
+                  <th class="text-end" style="width: 110px;">Berat (Lbs)</th>
                   <th>Keterangan</th>
-                  <th class="text-center" style="width: 100px;">Label / Aksi</th>
+                  <th class="text-center" style="width: 140px;">Aksi Cepat</th>
                 </tr>
               </thead>
               <tbody id="inventoryTableBody"></tbody>
@@ -419,7 +423,7 @@
   </div>
 </div>
 
-<!-- MODAL TAMBAH PRODUK -->
+<!-- MODAL TAMBAH PRODUK BARU -->
 <div class="modal fade" id="modalTambahProduk" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -459,7 +463,7 @@
           <div class="row">
             <div class="col-md-4 mb-3">
               <label class="form-label fw-bold">Barcode / SKU</label>
-              <input type="text" id="newBarcode" class="form-control" placeholder="Scan / ketik barcode" required>
+              <input type="text" id="newBarcode" class="form-control" placeholder="Scan / ketik barcode unik" required>
             </div>
             <div class="col-md-4 mb-3">
               <label class="form-label fw-bold">Kode Produksi</label>
@@ -477,7 +481,7 @@
 
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold">Stok Masuk (Qty)</label>
+              <label class="form-label fw-bold">Stok Masuk Awal (Qty)</label>
               <input type="number" id="newQty" class="form-control" value="0" min="0" required>
             </div>
             <div class="col-md-6 mb-3">
@@ -503,7 +507,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// Master Data Standar PT Lampung Bay Seafood
+// Data Master Standar PT Lampung Bay Seafood
 const defaultItemsTemplate = [
   { barcode: "SLP-01", kategori: "FORZEN SLIPER MEAT", size: "Size U-2 Oz", kodeProduksi: "PRD-SLP-01", unit: "Bag", sysQty: 1638, sysLbs: 8190, opQty: 1638, opLbs: 8190, ket: "" },
   { barcode: "GRP-01", kategori: "FROZEN FARMER GROUPER SKIN LESS", size: "4-6 oz", kodeProduksi: "PRD-GRP-01", unit: "Mc", sysQty: 0, sysLbs: 0, opQty: 0, opLbs: 0, ket: "" },
@@ -546,6 +550,7 @@ let allSessions = {
 };
 let currentItems = JSON.parse(JSON.stringify(defaultItemsTemplate));
 
+// Ganti Peran
 function setRole(role) {
   currentRole = role;
   localStorage.setItem('LBS_USER_ROLE', role);
@@ -562,29 +567,19 @@ function applyRoleUI() {
   
   const btnAdmin = document.getElementById('btnRoleAdmin');
   const btnOperator = document.getElementById('btnRoleOperator');
-  const roleBadge = document.getElementById('currentRoleText');
-  const roleDesc = document.getElementById('roleDescText');
-  const masterDesc = document.getElementById('masterDesc');
-
-  if (isOperator) {
-    btnOperator.className = 'btn btn-sm btn-warning fw-bold active';
-    btnAdmin.className = 'btn btn-sm btn-outline-light';
-    roleBadge.className = 'badge bg-warning text-dark me-2';
-    roleBadge.innerText = 'MODE: OPERATOR (COLD STORAGE)';
-    roleDesc.innerText = 'Akses operator: Scan barcode, input opname fisik, cetak label & lihat laporan.';
-    if (masterDesc) masterDesc.innerText = 'Mode Operator: Hanya dapat melihat data dan mencetak label barcode.';
-  } else {
-    btnAdmin.className = 'btn btn-sm btn-primary fw-bold active';
-    btnOperator.className = 'btn btn-sm btn-outline-light';
-    roleBadge.className = 'badge bg-primary me-2';
-    roleBadge.innerText = 'MODE: ADMIN';
-    roleDesc.innerText = 'Akses penuh: Edit master stok, kode produksi, tambah produk baru, buat sesi opname, dan unduh laporan.';
-    if (masterDesc) masterDesc.innerText = 'Mode Admin: Anda dapat mengedit stok, kode produksi, dan menambah item baru.';
+  if (btnAdmin && btnOperator) {
+    if (isOperator) {
+      btnOperator.className = 'btn btn-sm btn-warning fw-bold active';
+      btnAdmin.className = 'btn btn-sm btn-outline-light';
+    } else {
+      btnAdmin.className = 'btn btn-sm btn-primary fw-bold active';
+      btnOperator.className = 'btn btn-sm btn-outline-light';
+    }
   }
-
   renderInventoryTable();
 }
 
+// Inisialisasi Lokal
 function initLocalData() {
   const saved = localStorage.getItem('LBS_LOCAL_SESSIONS');
   if (saved) {
@@ -596,6 +591,7 @@ function initLocalData() {
   loadCurrentSessionData();
 }
 
+// Inisialisasi Firebase
 function initFirebase() {
   initLocalData();
   applyRoleUI();
@@ -631,7 +627,6 @@ function initFirebase() {
     firebaseDb.ref('inventory_sessions').on('value', (snapshot) => {
       const data = snapshot.val();
       if (!data) {
-        // Jika database masih null/kosong, otomatis isi dengan template awal
         firebaseDb.ref('inventory_sessions').set(allSessions);
       } else {
         allSessions = data;
@@ -641,7 +636,7 @@ function initFirebase() {
       }
     });
   } catch(e) {
-    console.warn("Firebase offline:", e);
+    console.warn("Firebase berjalan lokal:", e);
   }
 }
 
@@ -690,17 +685,13 @@ function loadCurrentSessionData() {
 }
 
 function promptNewSession() {
-  if (currentRole !== 'admin') {
-    alert("Hanya Admin yang dapat membuat sesi opname baru!");
-    return;
-  }
   const now = new Date();
   const defaultDateStr = now.toISOString().split('T')[0];
   const dateInput = prompt("Masukkan Tanggal Opname Baru (Format YYYY-MM-DD):", defaultDateStr);
   if (!dateInput) return;
 
   if (allSessions[dateInput]) {
-    alert("Sesi tanggal ini sudah ada! Membuka sesi yang sudah ada.");
+    alert("Sesi tanggal ini sudah ada!");
     currentSessionKey = dateInput;
     loadCurrentSessionData();
     return;
@@ -719,11 +710,6 @@ function promptNewSession() {
 }
 
 function updateDocMeta() {
-  if (currentRole !== 'admin') {
-    alert("Hanya Admin yang dapat mengubah nomor berita acara!");
-    document.getElementById('docNomor').value = allSessions[currentSessionKey]?.docNomor || currentDocNomor;
-    return;
-  }
   const newDocNo = document.getElementById('docNomor').value;
   if (allSessions[currentSessionKey]) {
     allSessions[currentSessionKey].docNomor = newDocNo;
@@ -737,12 +723,11 @@ function renderAll() {
   renderLaporan();
 }
 
+// Render Master Table
 function renderInventoryTable() {
   const tbody = document.getElementById('inventoryTableBody');
   if (!tbody) return;
   tbody.innerHTML = '';
-  
-  const isOperator = currentRole === 'operator';
   
   currentItems.forEach((item, idx) => {
     tbody.innerHTML += `
@@ -755,21 +740,22 @@ function renderInventoryTable() {
         </td>
         <td class="text-center"><span class="badge bg-secondary">${item.unit}</span></td>
         <td>
-          <input type="text" class="form-control form-control-sm ${isOperator ? 'bg-light' : ''}" ${isOperator ? 'readonly' : ''} value="${item.kodeProduksi || ''}" onchange="updateItemField(${idx}, 'kodeProduksi', this.value)">
+          <input type="text" class="form-control form-control-sm" value="${item.kodeProduksi || ''}" onchange="updateItemField(${idx}, 'kodeProduksi', this.value)">
         </td>
         <td>
-          <input type="number" class="form-control form-control-sm text-end fw-bold ${isOperator ? 'bg-light' : ''}" ${isOperator ? 'readonly' : ''} value="${item.sysQty}" onchange="updateItemField(${idx}, 'sysQty', Number(this.value))">
+          <input type="number" class="form-control form-control-sm text-end fw-bold" value="${item.sysQty}" onchange="updateItemField(${idx}, 'sysQty', Number(this.value))">
         </td>
         <td>
-          <input type="number" step="any" class="form-control form-control-sm text-end fw-bold text-primary ${isOperator ? 'bg-light' : ''}" ${isOperator ? 'readonly' : ''} value="${item.sysLbs}" onchange="updateItemField(${idx}, 'sysLbs', Number(this.value))">
+          <input type="number" step="any" class="form-control form-control-sm text-end fw-bold text-primary" value="${item.sysLbs}" onchange="updateItemField(${idx}, 'sysLbs', Number(this.value))">
         </td>
         <td>
-          <input type="text" class="form-control form-control-sm ${isOperator ? 'bg-light' : ''}" ${isOperator ? 'readonly' : ''} value="${item.ket || ''}" placeholder="Keterangan..." onchange="updateItemField(${idx}, 'ket', this.value)">
+          <input type="text" class="form-control form-control-sm" value="${item.ket || ''}" placeholder="Keterangan..." onchange="updateItemField(${idx}, 'ket', this.value)">
         </td>
         <td class="text-center">
           <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-success" type="button" onclick="quickAddStockModal(${idx})" title="Tambah Stok Masuk"><i class="bi bi-plus-circle"></i></button>
             <button class="btn btn-outline-dark" type="button" onclick="showBarcodeModal(${idx})" title="Cetak Barcode"><i class="bi bi-qr-code"></i></button>
-            ${!isOperator ? `<button class="btn btn-outline-danger" type="button" onclick="deleteItem(${idx})" title="Hapus"><i class="bi bi-trash"></i></button>` : ''}
+            <button class="btn btn-outline-danger" type="button" onclick="deleteItem(${idx})" title="Hapus"><i class="bi bi-trash"></i></button>
           </div>
         </td>
       </tr>
@@ -778,17 +764,33 @@ function renderInventoryTable() {
 }
 
 function updateItemField(idx, field, val) {
-  if (currentRole !== 'admin') return;
   currentItems[idx][field] = val;
   allSessions[currentSessionKey].items = currentItems;
   persistSession(currentSessionKey, allSessions[currentSessionKey]);
 }
 
+function quickAddStockModal(idx) {
+  const item = currentItems[idx];
+  const tambahQty = prompt(`Tambah Stok Masuk untuk ${item.kategori} (${item.size}):\nStok saat ini: ${item.sysQty} ${item.unit}\n\nMasukkan JUMLAH TAMBAHAN (Qty):`, "0");
+  if (tambahQty === null) return;
+  
+  const tambahLbs = prompt(`Masukkan TAMBAHAN BERAT (Lbs):`, "0");
+  if (tambahLbs === null) return;
+
+  const nQty = Number(tambahQty) || 0;
+  const nLbs = Number(tambahLbs) || 0;
+
+  item.sysQty = (Number(item.sysQty) || 0) + nQty;
+  item.sysLbs = (Number(item.sysLbs) || 0) + nLbs;
+  item.opQty = item.sysQty;
+  item.opLbs = item.sysLbs;
+
+  allSessions[currentSessionKey].items = currentItems;
+  persistSession(currentSessionKey, allSessions[currentSessionKey]);
+  alert(`Berhasil menambahkan +${nQty} ${item.unit} (+${nLbs} Lbs) ke stok ${item.kategori}!`);
+}
+
 function deleteItem(idx) {
-  if (currentRole !== 'admin') {
-    alert("Hanya Admin yang dapat menghapus data barang!");
-    return;
-  }
   if (confirm(`Hapus item ${currentItems[idx].kategori} (${currentItems[idx].size})?`)) {
     currentItems.splice(idx, 1);
     allSessions[currentSessionKey].items = currentItems;
@@ -928,7 +930,42 @@ function renderLaporan() {
   flushSubtotal();
 }
 
-// Scanner Logik
+// Toggle Mode Input (Opname vs Tambah Stok)
+function toggleActionType() {
+  const isTambah = document.getElementById('actTambah').checked;
+  const badge = document.getElementById('actionModeBadge');
+  const title = document.getElementById('inputSectionTitle');
+  const lblQ = document.getElementById('lblInputQty');
+  const lblL = document.getElementById('lblInputLbs');
+  const btn = document.getElementById('btnSimpanUpdate');
+
+  if (isTambah) {
+    badge.className = 'badge bg-light text-success';
+    badge.innerText = 'Mode: Tambah Stok Masuk';
+    title.innerHTML = '<i class="bi bi-plus-circle-fill text-success"></i> Tambahan Stok Masuk Baru';
+    lblQ.innerText = 'Tambah Qty (+)';
+    lblL.innerText = 'Tambah Berat Lbs (+)';
+    btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i> Tambahkan ke Stok';
+    document.getElementById('opnameRealQty').value = '';
+    document.getElementById('opnameRealLbs').value = '';
+  } else {
+    badge.className = 'badge bg-light text-primary';
+    badge.innerText = 'Mode: Opname Fisik';
+    title.innerHTML = '<i class="bi bi-check2-circle text-success"></i> Hitungan Fisik Aktual';
+    lblQ.innerText = 'Jumlah Fisik (Qty/Box/Bag)';
+    lblL.innerText = 'Berat Fisik (Lbs)';
+    btn.innerHTML = '<i class="bi bi-cloud-arrow-up me-1"></i> Simpan Hasil Opname';
+    
+    const idx = document.getElementById('opnameItemIndex').value;
+    if (idx !== '') {
+      const item = currentItems[idx];
+      document.getElementById('opnameRealQty').value = item.opQty !== undefined ? item.opQty : item.sysQty;
+      document.getElementById('opnameRealLbs').value = item.opLbs !== undefined ? item.opLbs : item.sysLbs;
+    }
+  }
+}
+
+// Scanner Logik (USB/Bluetooth & Global Listen)
 const scanInput = document.getElementById('barcodeScannerInput');
 if (scanInput) {
   scanInput.addEventListener('keydown', function(e) {
@@ -982,8 +1019,8 @@ function processBarcodeSearch(rawCode) {
     document.getElementById('opnameKeterangan').value = item.ket || '';
     document.getElementById('opnameSysQty').value = item.sysQty;
     document.getElementById('opnameSysLbs').value = item.sysLbs;
-    document.getElementById('opnameRealQty').value = item.opQty !== undefined ? item.opQty : item.sysQty;
-    document.getElementById('opnameRealLbs').value = item.opLbs !== undefined ? item.opLbs : item.sysLbs;
+
+    toggleActionType();
 
     document.getElementById('opnameRealQty').focus();
     document.getElementById('opnameRealQty').select();
@@ -995,6 +1032,7 @@ function processBarcodeSearch(rawCode) {
   if (elInput) elInput.value = '';
 }
 
+// Scanner Kamera HP Langsung
 let html5QrCode = null;
 function initCamera() {
   if (html5QrCode && html5QrCode.isScanning) return;
@@ -1014,6 +1052,7 @@ function stopCamera() {
   }
 }
 
+// Form Submit: Tambah Stok atau Opname
 document.getElementById('formOpnameUpdate').addEventListener('submit', function(e) {
   e.preventDefault();
   const idx = document.getElementById('opnameItemIndex').value;
@@ -1022,20 +1061,34 @@ document.getElementById('formOpnameUpdate').addEventListener('submit', function(
     return;
   }
 
-  const realQty = Number(document.getElementById('opnameRealQty').value);
-  const realLbs = Number(document.getElementById('opnameRealLbs').value);
+  const isTambah = document.getElementById('actTambah').checked;
+  const valQty = Number(document.getElementById('opnameRealQty').value);
+  const valLbs = Number(document.getElementById('opnameRealLbs').value);
   const kodeProduksi = document.getElementById('opnameKodeProduksi').value;
   const ket = document.getElementById('opnameKeterangan').value;
 
-  currentItems[idx].opQty = realQty;
-  currentItems[idx].opLbs = realLbs;
-  currentItems[idx].kodeProduksi = kodeProduksi;
-  currentItems[idx].ket = ket;
+  const item = currentItems[idx];
+
+  if (isTambah) {
+    // Mode Tambah Stok Masuk: Tambahkan ke stok awal
+    item.sysQty = (Number(item.sysQty) || 0) + valQty;
+    item.sysLbs = (Number(item.sysLbs) || 0) + valLbs;
+    item.opQty = item.sysQty;
+    item.opLbs = item.sysLbs;
+    alert(`Berhasil menambahkan +${valQty} ${item.unit} (+${valLbs} Lbs) ke dalam stok!`);
+  } else {
+    // Mode Stock Opname: Perbarui fisik riil
+    item.opQty = valQty;
+    item.opLbs = valLbs;
+    alert(`Hasil opname fisik berhasil disimpan!`);
+  }
+
+  item.kodeProduksi = kodeProduksi;
+  item.ket = ket;
 
   allSessions[currentSessionKey].items = currentItems;
   persistSession(currentSessionKey, allSessions[currentSessionKey]);
 
-  alert(`Hasil opname berhasil disimpan & disinkronkan!`);
   resetOpnameForm();
 });
 
@@ -1046,12 +1099,9 @@ function resetOpnameForm() {
   document.getElementById('scanStatusAlert').classList.add('d-none');
 }
 
+// Tambah Produk Baru
 document.getElementById('formTambahProdukBaru').addEventListener('submit', function(e) {
   e.preventDefault();
-  if (currentRole !== 'admin') {
-    alert("Hanya Admin yang dapat menambah produk baru!");
-    return;
-  }
   const newItem = {
     barcode: document.getElementById('newBarcode').value.trim(),
     kategori: document.getElementById('newCategory').value.trim(),
@@ -1066,7 +1116,7 @@ document.getElementById('formTambahProdukBaru').addEventListener('submit', funct
   };
 
   if (currentItems.some(i => i.barcode.toLowerCase() === newItem.barcode.toLowerCase())) {
-    alert('Barcode ini sudah ada di database!');
+    alert('Barcode ini sudah terdaftar! Gunakan kode barcode lain.');
     return;
   }
 
@@ -1074,7 +1124,7 @@ document.getElementById('formTambahProdukBaru').addEventListener('submit', funct
   allSessions[currentSessionKey].items = currentItems;
   persistSession(currentSessionKey, allSessions[currentSessionKey]);
 
-  alert('Item baru berhasil ditambahkan!');
+  alert('Produk baru berhasil ditambahkan ke database!');
   this.reset();
   bootstrap.Modal.getInstance(document.getElementById('modalTambahProduk')).hide();
 });
@@ -1106,7 +1156,7 @@ function printBarcodeLabel() {
   location.reload();
 }
 
-// Download Excel
+// Download Excel (.xlsx)
 function exportToExcel() {
   try {
     const sess = allSessions[currentSessionKey] || {};
@@ -1162,7 +1212,7 @@ function exportToExcel() {
   }
 }
 
-// Download PDF
+// Download PDF (.pdf)
 function exportToPDF() {
   try {
     const jsPDFClass = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
@@ -1276,7 +1326,7 @@ function exportToPDF() {
   }
 }
 
-// Jalankan sistem
+// Inisialisasi otomatis saat web dibuka
 initFirebase();
 </script>
 
