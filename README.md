@@ -1,3 +1,8 @@
-# LBS Inventory v9 – Sidebar Final
+# LBS Inventory v8
+Offline Mode + Sinkronisasi Otomatis.
 
-Update tampilan navigasi sidebar sesuai permintaan. Urutan: Dashboard, Produksi, Inventory, Stok Masuk/Keluar, Stok Opname, Laporan, Pengguna, Produk. Tidak mengubah database Firebase.
+- Firestore persistent local cache.
+- Status Online/Offline.
+- Produksi tetap dapat dicatat saat offline dan masuk antrean lokal.
+- Saat internet kembali, antrean Produksi disinkronkan otomatis.
+- Opname menggunakan cache Firestore sehingga perubahan yang dibuat saat offline akan menunggu sinkronisasi Firebase.
