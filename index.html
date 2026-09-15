@@ -17,8 +17,18 @@
     <div class="logo">LBS</div>
     <h1>LBS Inventory</h1>
     <p>PT Lampung Bay Seafood</p>
-    <input id="email" type="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Password">
+    <div class="login-tabs">
+      <button type="button" id="adminLoginTab" class="login-tab active">Admin</button>
+      <button type="button" id="operatorLoginTab" class="login-tab">Operator</button>
+    </div>
+    <div id="adminLoginFields">
+      <input id="email" type="email" placeholder="Email Admin">
+      <input id="password" type="password" placeholder="Password">
+    </div>
+    <div id="operatorLoginFields" class="hidden">
+      <input id="operatorPin" type="password" inputmode="numeric" maxlength="6" placeholder="PIN Operator (6 digit)" autocomplete="off">
+      <p class="small login-note">PIN digunakan sebagai password akun Operator Firebase.</p>
+    </div>
     <button id="loginBtn" class="primary">Masuk</button>
     <p id="loginError" class="error"></p>
   </div>
@@ -36,7 +46,7 @@
     <button class="nav" data-page="reports">📄 Laporan</button>
     <button class="nav admin-only" data-page="users">👥 Pengguna</button>
     <div class="side-bottom">
-      <span id="connectionStatus" class="connection-status">● Online</span><span id="userName"></span>
+      <span id="userName"></span>
       <button id="logoutBtn" class="danger">Keluar</button>
     </div>
   </aside>

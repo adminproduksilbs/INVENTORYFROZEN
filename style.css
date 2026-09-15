@@ -46,4 +46,10 @@
 @media(max-width:700px){.scan-opname-box{padding:12px}.scan-opname-box #opReader{width:100%!important}.scan-opname-box h3{font-size:16px}.table-wrap{overflow-x:auto}.table{min-width:760px}}
 .production-card{margin-bottom:15px}.production-panel{border:1px solid #dbe3ef;border-radius:14px;padding:16px;background:#f8fafc}.production-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.production-history{margin-top:15px}.production-panel form{margin-top:12px}.production-panel .notice{background:white;border:1px solid #eaecf0}.quick-item{border:1px solid #eaecf0;color:#172033}
 
-.connection-status{font-size:12px;font-weight:700;padding:6px 10px;border-radius:999px;background:#f2f4f7;color:#475467;white-space:nowrap}.connection-status.online{background:#ecfdf3;color:#067647}.connection-status.offline{background:#fff7ed;color:#c4320a}@media(max-width:600px){.topbar{gap:8px}.connection-status{font-size:11px;padding:5px 8px}}
+
+/* Login mode selector */
+.login-tabs{display:flex;gap:8px;margin:0 0 14px;padding:4px;background:#eef2ff;border-radius:12px}
+.login-tab{flex:1;border:0;border-radius:9px;padding:10px;background:transparent;color:#64748b;font-weight:700;cursor:pointer}
+.login-tab.active{background:#fff;color:#1e3a8a;box-shadow:0 2px 8px rgba(15,23,42,.08)}
+.login-note{margin:6px 0 12px;text-align:left}
+#operatorPin{text-align:center;letter-spacing:7px;font-weight:800}

@@ -1,8 +1,10 @@
-# LBS Inventory v8
-Offline Mode + Sinkronisasi Otomatis.
+# LBS Inventory v9 - Operator PIN Login
 
-- Firestore persistent local cache.
-- Status Online/Offline.
-- Produksi tetap dapat dicatat saat offline dan masuk antrean lokal.
-- Saat internet kembali, antrean Produksi disinkronkan otomatis.
-- Opname menggunakan cache Firestore sehingga perubahan yang dibuat saat offline akan menunggu sinkronisasi Firebase.
+Update dari versi aplikasi terakhir dengan login Operator menggunakan PIN 6 digit.
+
+- Admin: Email + Password
+- Operator: PIN 6 digit
+- PIN Operator digunakan sebagai password Firebase Authentication untuk akun `operator@lampungbayseafood.com`.
+- Tidak mengubah database Firestore.
+
+PENTING: Sebelum memakai login PIN, password akun Authentication Operator harus diatur menjadi PIN 6 digit yang diinginkan di Firebase Console. Jangan menyimpan PIN di Firestore.
