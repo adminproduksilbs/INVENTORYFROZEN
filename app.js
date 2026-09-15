@@ -18,7 +18,7 @@ let loginMode="admin";
 function setLoginMode(mode){loginMode=mode;$("adminLoginTab").classList.toggle("active",mode==="admin");$("operatorLoginTab").classList.toggle("active",mode==="operator");$("adminLoginFields").classList.toggle("hidden",mode!=="admin");$("operatorLoginFields").classList.toggle("hidden",mode!=="operator");$("loginError").textContent="";$("loginBtn").textContent=mode==="operator"?"Masuk sebagai Operator":"Masuk";}
 $("adminLoginTab").onclick=()=>setLoginMode("admin");
 $("operatorLoginTab").onclick=()=>setLoginMode("operator");
-$("loginBtn").onclick=async()=>{ $("loginError").textContent="";try{if(loginMode==="operator"){const pin=$("operatorPin").value.trim();if(!/^\d{6}$/.test(pin)){throw new Error("PIN harus 6 digit.")}await signInWithEmailAndPassword(auth,"operator@lampungbayseafood.com",pin)}else{await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value)}}catch(e){$("loginError").textContent=e.message==="PIN harus 6 digit."?e.message:"Login gagal. Periksa PIN/password."}};
+$("loginBtn").onclick=async()=>{ $("loginError").textContent="";try{if(loginMode==="operator"){const pin=$("operatorPin").value.trim();if(!/^\d{4}$/.test(pin)){throw new Error("PIN harus 4 digit.")}await signInWithEmailAndPassword(auth,"operator@lampungbayseafood.com",pin)}else{await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value)}}catch(e){$("loginError").textContent=e.message==="PIN harus 4 digit."?e.message:"Login gagal. Periksa PIN/password."}};
 $("logoutBtn").onclick=()=>signOut(auth);
 
 async function loadProducts(){products=(await getDocs(collection(db,"products"))).docs.map(x=>({id:x.id,...x.data()}));}
@@ -30,24 +30,69 @@ function nav(page){document.querySelectorAll(".nav").forEach(x=>x.classList.togg
 document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>nav(n.dataset.page));
 
 async function renderDashboard(){
- await loadProducts();await loadTransactions();await loadOpnames();
- const total=products.length,stok=products.reduce((a,p)=>a+Number(p.stok||0),0),aktif=products.filter(p=>p.aktif!==false).length;
- $("content").innerHTML=`<div class="stats">
- <div class="card stat">Total Produk<b>${total}</b></div><div class="card stat">Produk Aktif<b>${aktif}</b></div>
- <div class="card stat">Total Stok<b>${money(stok)}</b></div><div class="card stat">Stok Opname<b>${opnames.length}</b></div></div>
- <div class="card chart-card" style="margin-top:15px"><div class="dashboard-head"><div><h3>📊 Grafik Stok Semua Produk</h3><p class="small">Menampilkan stok terkini seluruh produk.</p></div></div><div class="chart-wrap"><canvas id="stockChart"></canvas></div></div>
- <div class="grid"><div class="card"><h3>📦 Master Produk</h3><p>Kelola kode, barcode, kategori, satuan, berat dan stok awal.</p><button class="btn primary" onclick="nav('products')">Buka Produk</button></div>
- <div class="card"><h3>📊 Inventory</h3><p>Lihat stok terkini dan lakukan stok masuk/keluar.</p><button class="btn primary" onclick="nav('inventory')">Buka Inventory</button></div>
- <div class="card"><h3>🏭 Produksi</h3><p>Tambah hasil produksi ke stok dengan scan barcode atau input manual.</p><button class="btn primary" onclick="nav('production')">Buka Produksi</button></div>
- <div class="card"><h3>📝 Stok Opname</h3><p>Bandingkan stok sistem dengan stok fisik dan finalisasi penyesuaian.</p><button class="btn primary" onclick="nav('opname')">Buka Opname</button></div>
- <div class="card"><h3>📄 Laporan</h3><p>Export Excel dan PDF Berita Acara Stok Opname.</p><button class="btn primary" onclick="nav('reports')">Buka Laporan</button></div></div>
- <div class="card" style="margin-top:15px"><h3>Transaksi Terakhir</h3>${transactionTable(transactions.slice(0,8))}</div>`;
- const canvas=document.getElementById('stockChart');
- if(canvas && window.Chart){
-   const sorted=[...products].sort((a,b)=>Number(b.stok||0)-Number(a.stok||0));
-   new Chart(canvas,{type:'bar',data:{labels:sorted.map(p=>p.kodeProduk||p.namaProduk||'Produk'),datasets:[{label:'Stok',data:sorted.map(p=>Number(p.stok||0))}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>`Stok: ${Number(c.raw||0).toLocaleString('id-ID')}`}}},scales:{x:{ticks:{autoSkip:false,maxRotation:45,minRotation:0}},y:{beginAtZero:true,ticks:{precision:0}}}}});
- }
+  await loadProducts(); await loadTransactions(); await loadOpnames();
+  const total=products.length;
+  const aktif=products.filter(p=>p.aktif!==false).length;
+  const stok=products.reduce((a,p)=>a+Number(p.stok||0),0);
+  const latestOp=opnames[0];
+  const opnameCount=opnames.length;
+  const recent=transactions.slice(0,6);
+  const days=[];
+  const now=new Date();
+  for(let i=6;i>=0;i--){ const d=new Date(now); d.setHours(0,0,0,0); d.setDate(d.getDate()-i); days.push(d); }
+  const dayKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const txDate=t=>{ if(t.createdAt?.toDate) return t.createdAt.toDate(); if(t.createdAt) return new Date(t.createdAt); return null; };
+  const masuk=days.map(d=>transactions.filter(t=>{let x=txDate(t);return x&&dayKey(x)===dayKey(d)&&(t.type==='in'||t.type==='production')}).reduce((a,t)=>a+Number(t.qty||0),0));
+  const keluar=days.map(d=>transactions.filter(t=>{let x=txDate(t);return x&&dayKey(x)===dayKey(d)&&t.type==='out'}).reduce((a,t)=>a+Number(t.qty||0),0));
+  const labels=days.map(d=>d.toLocaleDateString('id-ID',{day:'2-digit',month:'short'}));
+  const cats={}; products.forEach(p=>{let c=(p.kategori||'Lainnya').trim()||'Lainnya'; cats[c]=(cats[c]||0)+1;});
+  const catRows=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  const catTotal=catRows.reduce((a,x)=>a+x[1],0)||1;
+  const online=navigator.onLine;
+  const welcome=currentProfile?.nama||currentUser?.email||'Admin';
+  const roleLabel=currentProfile?.role==='admin'?'Administrator':'Operator';
+  const lastSync=recent[0]?.createdAt ? dt(recent[0].createdAt) : 'Belum ada transaksi';
+  $('todayText').textContent=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+  $('topUserName').textContent=welcome;
+  $('topUserRole').textContent=roleLabel;
+  setOnlineUI(online);
+  $('content').innerHTML=`
+    <div class="welcome-row">
+      <div><h1>Selamat Datang, ${esc(welcome)} 👋</h1><p>Kelola stok, produksi dan inventori dengan lebih mudah dan efisien.</p></div>
+    </div>
+    <div class="stats dashboard-kpis">
+      <div class="card kpi kpi-blue"><div class="kpi-icon">▣</div><div><span>Total Produk</span><strong>${money(total)}</strong><small>produk terdaftar</small></div><div class="kpi-trend">↗ Data terkini</div></div>
+      <div class="card kpi kpi-green"><div class="kpi-icon">✓</div><div><span>Produk Aktif</span><strong>${money(aktif)}</strong><small>produk yang tersedia</small></div><div class="kpi-trend">● Aktif</div></div>
+      <div class="card kpi kpi-purple"><div class="kpi-icon">◉</div><div><span>Total Stok</span><strong>${money(stok)}</strong><small>total semua produk</small></div><div class="kpi-trend">↗ Terkini</div></div>
+      <div class="card kpi kpi-orange"><div class="kpi-icon">▤</div><div><span>Stok Opname</span><strong>${money(opnameCount)}</strong><small>opname tersimpan</small></div><div class="kpi-trend">${latestOp?.status==='draft'?'● Draft':'● Tersedia'}</div></div>
+    </div>
+    <div class="dashboard-grid">
+      <div class="card chart-card">
+        <div class="section-title"><div><h3>▥ Pergerakan Stok <span>(7 Hari Terakhir)</span></h3><p>Perbandingan stok masuk/produksi dan stok keluar.</p></div><div class="legend"><span><i class="dot in"></i> Stok Masuk</span><span><i class="dot out"></i> Stok Keluar</span></div></div>
+        <div class="chart-wrap line-chart"><canvas id="movementChart"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <div class="section-title"><div><h3>◔ Kategori Produk</h3><p>Komposisi produk berdasarkan kategori.</p></div></div>
+        <div class="category-panel"><div class="donut-wrap"><canvas id="categoryChart"></canvas><div class="donut-center"><strong>${total}</strong><span>Produk</span></div></div><div class="category-list">${catRows.slice(0,7).map((x,i)=>{let pct=(x[1]/catTotal*100).toFixed(1);return `<div class="cat-row"><span><i class="cat-dot c${i%7}"></i>${esc(x[0])}</span><b>${x[1]} <small>(${pct}%)</small></b></div>`}).join('')||'<div class="small">Belum ada kategori.</div>'}</div></div>
+      </div>
+    </div>
+    <div class="dashboard-bottom">
+      <div class="card activity-card"><div class="section-title"><div><h3>◷ Aktivitas Terbaru</h3><p>Transaksi terakhir di sistem.</p></div><button class="link-btn" onclick="nav('transactions')">Lihat Semua →</button></div>${activityTable(recent)}</div>
+      <div class="card sync-card"><div class="section-title"><div><h3>☁ Status Sinkronisasi</h3><p>Data tersimpan dan terhubung dengan Firebase.</p></div><button class="link-btn" onclick="refreshDashboard()">↻ Refresh</button></div><div class="sync-main ${online?'online':'offline'}"><div class="sync-icon">${online?'✓':'!'}</div><div><strong>${online?'Online':'Offline'}</strong><small>${online?'Terhubung ke Firebase':'Tidak ada koneksi internet'}</small></div></div><div class="sync-grid"><div><span>Transaksi Terbaru</span><b>${recent.length}</b><small>ditampilkan</small></div><div><span>Sinkron Terakhir</span><b>${esc(lastSync)}</b><small>${online?'Berhasil':'Menunggu koneksi'}</small></div></div></div>
+    </div>`;
+  drawDashboardCharts(labels,masuk,keluar,catRows);
 }
+
+function setOnlineUI(online){ const p=$('onlinePill'); if(p){p.classList.toggle('offline',!online);p.innerHTML=`<i></i> ${online?'Online':'Offline'}`;} }
+window.refreshDashboard=()=>nav('dashboard');
+window.addEventListener('online',()=>setOnlineUI(true)); window.addEventListener('offline',()=>setOnlineUI(false));
+function drawDashboardCharts(labels,masuk,keluar,catRows){
+  if(!window.Chart)return;
+  const mc=$('movementChart'); if(mc){new Chart(mc,{type:'line',data:{labels,datasets:[{label:'Stok Masuk',data:masuk,borderWidth:3,tension:.35,fill:true},{label:'Stok Keluar',data:keluar,borderWidth:3,tension:.35,fill:true}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{precision:0},grid:{color:'rgba(148,163,184,.15)'}}}}});}
+  const cc=$('categoryChart'); if(cc){new Chart(cc,{type:'doughnut',data:{labels:catRows.map(x=>x[0]),datasets:[{data:catRows.map(x=>x[1]),borderWidth:3,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} produk`}}}}});}
+}
+function activityTable(rows){return `<div class="table-wrap"><table class="table activity-table"><thead><tr><th>Tanggal & Waktu</th><th>Jenis Transaksi</th><th>Produk</th><th>Jumlah</th><th>Keterangan</th><th>User</th></tr></thead><tbody>${rows.map(t=>{let typ=t.type==='in'?'Stok Masuk':t.type==='out'?'Stok Keluar':t.type==='production'?'Produksi':'Stok Opname';let cls=t.type==='out'?'out':t.type==='production'?'prod':t.type==='adjustment'?'adj':'in';let sign=t.type==='out'?'-':'+';return `<tr><td>${dt(t.createdAt)}</td><td><span class="type-pill ${cls}">${typ}</span></td><td>${esc(t.namaProduk||t.kodeProduk||'-')}</td><td class="${cls==='out'?'negative':'positive'}">${sign}${money(t.qty)}</td><td>${esc(t.keterangan||'-')}</td><td>${esc(t.userName||'-')}</td></tr>`}).join('')||'<tr><td colspan="6" class="empty">Belum ada aktivitas.</td></tr>'}</tbody></table></div>`}
+
 function transactionTable(rows){return `<div class="table-wrap"><table class="table"><thead><tr><th>Tanggal</th><th>Produk</th><th>Jenis</th><th>Qty</th><th>Sebelum</th><th>Sesudah</th><th>User</th></tr></thead><tbody>${rows.map(t=>`<tr><td>${dt(t.createdAt)}</td><td>${esc(t.namaProduk)}</td><td><span class="badge">${t.type==="in"?"MASUK":t.type==="out"?"KELUAR":t.type==="production"?"PRODUKSI":"ADJUSTMENT"}</span></td><td>${money(t.qty)}</td><td>${money(t.stokSebelum)}</td><td>${money(t.stokSesudah)}</td><td>${esc(t.userName)}</td></tr>`).join("")||"<tr><td colspan=7>Belum ada transaksi</td></tr>"}</tbody></table></div>`}
 
 function renderProducts(){
