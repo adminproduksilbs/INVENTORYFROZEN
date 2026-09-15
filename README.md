@@ -36,3 +36,9 @@ Koleksi lama `user` tidak disentuh.
 - Firebase Authentication Authorized Domains harus memuat `adminproduksilbs.github.io`.
 - Firestore Rules harus memakai rules role-based yang sudah dipasang.
 - Operator dapat membaca produk/inventory dan melakukan transaksi/opname, tetapi tidak dapat mengelola produk/kategori/user.
+
+## Branding
+Sidebar menggunakan logo `logo-lbs.png` yang diberikan pengguna, dengan nama aplikasi `Stok inventory frozen` dan `PT LAMPUNG BAY SEAFOOD`.
+
+## Dashboard v3
+Dashboard menampilkan ringkasan KPI, grafik stok semua produk secara otomatis, akses cepat, dan transaksi terbaru. Grafik mengambil data langsung dari collection `products`.
