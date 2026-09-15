@@ -1,0 +1,1 @@
+LBS Inventory starter. Buka index.html melalui web server/hosting. Login memakai Firebase Authentication dan collection users.
