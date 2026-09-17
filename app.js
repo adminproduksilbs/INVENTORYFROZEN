@@ -46,9 +46,9 @@ async function renderDashboard(){
   const masuk=days.map(d=>transactions.filter(t=>{let x=txDate(t);return x&&dayKey(x)===dayKey(d)&&(t.type==='in'||t.type==='production')}).reduce((a,t)=>a+Number(t.qty||0),0));
   const keluar=days.map(d=>transactions.filter(t=>{let x=txDate(t);return x&&dayKey(x)===dayKey(d)&&t.type==='out'}).reduce((a,t)=>a+Number(t.qty||0),0));
   const labels=days.map(d=>d.toLocaleDateString('id-ID',{day:'2-digit',month:'short'}));
-  const cats={}; products.forEach(p=>{let c=(p.kategori||'Lainnya').trim()||'Lainnya'; cats[c]=(cats[c]||0)+1;});
+  const cats={}; products.forEach(p=>{let c=(p.kategori||'Lainnya').trim()||'Lainnya'; cats[c]=(cats[c]||0)+Number(p.stok||0);});
   const catRows=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
-  const catTotal=catRows.reduce((a,x)=>a+x[1],0)||1;
+  const catTotal=stok||1;
   const online=navigator.onLine;
   const welcome=currentProfile?.nama||currentUser?.email||'Admin';
   const roleLabel=currentProfile?.role==='admin'?'Administrator':'Operator';
@@ -62,9 +62,9 @@ async function renderDashboard(){
       <div><h1>Selamat Datang, ${esc(welcome)} 👋</h1><p>Kelola stok, produksi dan inventori dengan lebih mudah dan efisien.</p></div>
     </div>
     <div class="stats dashboard-kpis">
-      <div class="card kpi kpi-blue"><div class="kpi-icon">▣</div><div><span>Total Produk</span><strong>${money(total)}</strong><small>produk terdaftar</small></div><div class="kpi-trend">↗ Data terkini</div></div>
-      <div class="card kpi kpi-green"><div class="kpi-icon">✓</div><div><span>Produk Aktif</span><strong>${money(aktif)}</strong><small>produk yang tersedia</small></div><div class="kpi-trend">● Aktif</div></div>
       <div class="card kpi kpi-purple"><div class="kpi-icon">◉</div><div><span>Total Stok</span><strong>${money(stok)}</strong><small>total semua produk</small></div><div class="kpi-trend">↗ Terkini</div></div>
+      <div class="card kpi kpi-green"><div class="kpi-icon">✓</div><div><span>Produk Aktif</span><strong>${money(aktif)}</strong><small>produk yang tersedia</small></div><div class="kpi-trend">● Aktif</div></div>
+      <div class="card kpi kpi-blue"><div class="kpi-icon">▣</div><div><span>Total Produk</span><strong>${money(total)}</strong><small>produk terdaftar</small></div><div class="kpi-trend">↗ Data terkini</div></div>
       <div class="card kpi kpi-orange"><div class="kpi-icon">▤</div><div><span>Stok Opname</span><strong>${money(opnameCount)}</strong><small>opname tersimpan</small></div><div class="kpi-trend">${latestOp?.status==='draft'?'● Draft':'● Tersedia'}</div></div>
     </div>
     <div class="dashboard-grid">
@@ -73,8 +73,8 @@ async function renderDashboard(){
         <div class="chart-wrap line-chart"><canvas id="movementChart"></canvas></div>
       </div>
       <div class="card chart-card">
-        <div class="section-title"><div><h3>◔ Kategori Produk</h3><p>Komposisi produk berdasarkan kategori.</p></div></div>
-        <div class="category-panel"><div class="donut-wrap"><canvas id="categoryChart"></canvas><div class="donut-center"><strong>${total}</strong><span>Produk</span></div></div><div class="category-list">${catRows.slice(0,7).map((x,i)=>{let pct=(x[1]/catTotal*100).toFixed(1);return `<div class="cat-row"><span><i class="cat-dot c${i%7}"></i>${esc(x[0])}</span><b>${x[1]} <small>(${pct}%)</small></b></div>`}).join('')||'<div class="small">Belum ada kategori.</div>'}</div></div>
+        <div class="section-title"><div><h3>◔ Komposisi Produk</h3><p>Komposisi total stok berdasarkan kategori.</p></div></div>
+        <div class="category-panel"><div class="donut-wrap"><canvas id="categoryChart"></canvas><div class="donut-center"><strong>${money(stok)}</strong><span>Total Stok</span></div></div><div class="category-list">${catRows.slice(0,7).map((x,i)=>{let pct=(x[1]/catTotal*100).toFixed(1);return `<div class="cat-row"><span><i class="cat-dot c${i%7}"></i>${esc(x[0])}</span><b>${money(x[1])} <small>(${pct}%)</small></b></div>`}).join('')||'<div class="small">Belum ada kategori.</div>'}</div></div>
       </div>
     </div>
     <div class="dashboard-bottom">
@@ -90,7 +90,7 @@ window.addEventListener('online',()=>setOnlineUI(true)); window.addEventListener
 function drawDashboardCharts(labels,masuk,keluar,catRows){
   if(!window.Chart)return;
   const mc=$('movementChart'); if(mc){new Chart(mc,{type:'line',data:{labels,datasets:[{label:'Stok Masuk',data:masuk,borderWidth:3,tension:.35,fill:true},{label:'Stok Keluar',data:keluar,borderWidth:3,tension:.35,fill:true}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{precision:0},grid:{color:'rgba(148,163,184,.15)'}}}}});}
-  const cc=$('categoryChart'); if(cc){new Chart(cc,{type:'doughnut',data:{labels:catRows.map(x=>x[0]),datasets:[{data:catRows.map(x=>x[1]),borderWidth:3,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} produk`}}}}});}
+  const cc=$('categoryChart'); if(cc){new Chart(cc,{type:'doughnut',data:{labels:catRows.map(x=>x[0]),datasets:[{data:catRows.map(x=>x[1]),backgroundColor:['#3b82f6','#f59e0b','#10b981','#8b5cf6','#ef4444','#06b6d4','#ec4899'],borderWidth:3,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${money(c.raw)} stok`}}}}});}
 }
 function activityTable(rows){return `<div class="table-wrap"><table class="table activity-table"><thead><tr><th>Tanggal & Waktu</th><th>Jenis Transaksi</th><th>Produk</th><th>Jumlah</th><th>Keterangan</th><th>User</th></tr></thead><tbody>${rows.map(t=>{let typ=t.type==='in'?'Stok Masuk':t.type==='out'?'Stok Keluar':t.type==='production'?'Produksi':'Stok Opname';let cls=t.type==='out'?'out':t.type==='production'?'prod':t.type==='adjustment'?'adj':'in';let sign=t.type==='out'?'-':'+';return `<tr><td>${dt(t.createdAt)}</td><td><span class="type-pill ${cls}">${typ}</span></td><td>${esc(t.namaProduk||t.kodeProduk||'-')}</td><td class="${cls==='out'?'negative':'positive'}">${sign}${money(t.qty)}</td><td>${esc(t.keterangan||'-')}</td><td>${esc(t.userName||'-')}</td></tr>`}).join('')||'<tr><td colspan="6" class="empty">Belum ada aktivitas.</td></tr>'}</tbody></table></div>`}
 
