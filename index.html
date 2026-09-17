@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Stok Inventory Frozen - PT Lampung Bay Seafood</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=16">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
@@ -15,7 +15,7 @@
 <div id="loginPage">
   <div class="login-card">
     <div class="logo">LBS</div>
-    <h1>INVENTORY FROZEN</h1>
+    <h1>LBS Inventory</h1>
     <p>PT Lampung Bay Seafood</p>
     <div class="login-tabs">
       <button type="button" id="adminLoginTab" class="login-tab active">Admin</button>
@@ -27,7 +27,7 @@
     </div>
     <div id="operatorLoginFields" class="hidden">
       <input id="operatorPin" type="password" inputmode="numeric" maxlength="4" minlength="4" placeholder="PIN Operator (4 digit)" autocomplete="off">
-      <p class="small login-note">Masukkan PIN 4 digit.</p>
+      <p class="small login-note">Masukkan PIN Operator 4 digit.</p>
     </div>
     <button id="loginBtn" class="primary">Masuk</button>
     <p id="loginError" class="error"></p>
@@ -67,6 +67,6 @@
   </div>
 </div>
 <div id="toast"></div>
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=17"></script>
 </body>
 </html>
