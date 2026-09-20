@@ -94,7 +94,15 @@ function drawDashboardCharts(labels,masuk,keluar,catRows){
 }
 function activityTable(rows){return `<div class="table-wrap"><table class="table activity-table"><thead><tr><th>Tanggal & Waktu</th><th>Jenis Transaksi</th><th>Produk</th><th>Jumlah</th><th>Keterangan</th><th>User</th></tr></thead><tbody>${rows.map(t=>{let typ=t.type==='in'?'Stok Masuk':t.type==='out'?'Stok Keluar':t.type==='production'?'Produksi':'Stok Opname';let cls=t.type==='out'?'out':t.type==='production'?'prod':t.type==='adjustment'?'adj':'in';let sign=t.type==='out'?'-':'+';return `<tr><td>${dt(t.createdAt)}</td><td><span class="type-pill ${cls}">${typ}</span></td><td>${esc(t.namaProduk||t.kodeProduk||'-')}</td><td class="${cls==='out'?'negative':'positive'}">${sign}${money(t.qty)}</td><td>${esc(t.keterangan||'-')}</td><td>${esc(t.userName||'-')}</td></tr>`}).join('')||'<tr><td colspan="6" class="empty">Belum ada aktivitas.</td></tr>'}</tbody></table></div>`}
 
-function transactionTable(rows){return `<div class="table-wrap"><table class="table"><thead><tr><th>Tanggal</th><th>Produk</th><th>Kode Produksi</th><th>Jenis</th><th>Qty</th><th>Sebelum</th><th>Sesudah</th><th>User</th></tr></thead><tbody>${rows.map(t=>`<tr><td>${dt(t.createdAt)}</td><td>${esc(t.namaProduk)}</td><td><b>${esc(t.kodeProduksi||"-")}</b></td><td><span class="badge">${t.type==="in"?"MASUK":t.type==="out"?"KELUAR":t.type==="production"?"PRODUKSI":"ADJUSTMENT"}</span></td><td>${money(t.qty)}</td><td>${money(t.stokSebelum)}</td><td>${money(t.stokSesudah)}</td><td>${esc(t.userName)}</td></tr>`).join("")||"<tr><td colspan=8>Belum ada transaksi</td></tr>"}</tbody></table></div>`}
+function transactionTable(rows){
+  const dayKey=t=>{const d=t?.createdAt?.toDate?t.createdAt.toDate():(t?.createdAt?new Date(t.createdAt):null);return d&&!isNaN(d)?d.toISOString().slice(0,10):"-"};
+  const dayLabel=k=>{if(k==="-")return "Tanggal Tidak Tersedia";const d=new Date(k+"T00:00:00");return d.toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"})};
+  const groups={};
+  rows.forEach(t=>{const k=dayKey(t);(groups[k]??=[]).push(t)});
+  const keys=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+  if(!keys.length)return `<div class="table-wrap"><table class="table"><thead><tr><th>Produk</th><th>Kode Produksi</th><th>Jenis</th><th>Qty</th><th>Sebelum</th><th>Sesudah</th><th>User</th></tr></thead><tbody><tr><td colspan="7">Belum ada transaksi</td></tr></tbody></table></div>`;
+  return keys.map(k=>`<div class="date-group"><div class="date-group-title">📅 ${dayLabel(k)}</div><div class="table-wrap"><table class="table"><thead><tr><th>Produk</th><th>Kode Produksi</th><th>Jenis</th><th>Qty</th><th>Sebelum</th><th>Sesudah</th><th>User</th></tr></thead><tbody>${groups[k].map(t=>`<tr><td>${esc(t.namaProduk)}</td><td><b>${esc(t.kodeProduksi||"-")}</b></td><td><span class="badge">${t.type==="in"?"MASUK":t.type==="out"?"KELUAR":t.type==="production"?"PRODUKSI":"ADJUSTMENT"}</span></td><td>${money(t.qty)}</td><td>${money(t.stokSebelum)}</td><td>${money(t.stokSesudah)}</td><td>${esc(t.userName)}</td></tr>`).join("")}</tbody></table></div></div>`).join("");
+}
 
 function renderProducts(){
  const admin=currentProfile.role==="admin";
