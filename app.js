@@ -94,15 +94,7 @@ function drawDashboardCharts(labels,masuk,keluar,catRows){
 }
 function activityTable(rows){return `<div class="table-wrap"><table class="table activity-table"><thead><tr><th>Tanggal & Waktu</th><th>Jenis Transaksi</th><th>Produk</th><th>Jumlah</th><th>Keterangan</th><th>User</th></tr></thead><tbody>${rows.map(t=>{let typ=t.type==='in'?'Stok Masuk':t.type==='out'?'Stok Keluar':t.type==='production'?'Produksi':'Stok Opname';let cls=t.type==='out'?'out':t.type==='production'?'prod':t.type==='adjustment'?'adj':'in';let sign=t.type==='out'?'-':'+';return `<tr><td>${dt(t.createdAt)}</td><td><span class="type-pill ${cls}">${typ}</span></td><td>${esc(t.namaProduk||t.kodeProduk||'-')}</td><td class="${cls==='out'?'negative':'positive'}">${sign}${money(t.qty)}</td><td>${esc(t.keterangan||'-')}</td><td>${esc(t.userName||'-')}</td></tr>`}).join('')||'<tr><td colspan="6" class="empty">Belum ada aktivitas.</td></tr>'}</tbody></table></div>`}
 
-function transactionTable(rows){
-  const dayKey=t=>{const d=t?.createdAt?.toDate?t.createdAt.toDate():(t?.createdAt?new Date(t.createdAt):null);return d&&!isNaN(d)?d.toISOString().slice(0,10):"-"};
-  const dayLabel=k=>{if(k==="-")return "Tanggal Tidak Tersedia";const d=new Date(k+"T00:00:00");return d.toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"})};
-  const groups={};
-  rows.forEach(t=>{const k=dayKey(t);(groups[k]??=[]).push(t)});
-  const keys=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
-  if(!keys.length)return `<div class="table-wrap"><table class="table"><thead><tr><th>Produk</th><th>Kode Produksi</th><th>Jenis</th><th>Qty</th><th>Sebelum</th><th>Sesudah</th><th>User</th></tr></thead><tbody><tr><td colspan="7">Belum ada transaksi</td></tr></tbody></table></div>`;
-  return keys.map(k=>`<div class="date-group"><div class="date-group-title">📅 ${dayLabel(k)}</div><div class="table-wrap"><table class="table"><thead><tr><th>Produk</th><th>Kode Produksi</th><th>Jenis</th><th>Qty</th><th>Sebelum</th><th>Sesudah</th><th>User</th></tr></thead><tbody>${groups[k].map(t=>`<tr><td>${esc(t.namaProduk)}</td><td><b>${esc(t.kodeProduksi||"-")}</b></td><td><span class="badge">${t.type==="in"?"MASUK":t.type==="out"?"KELUAR":t.type==="production"?"PRODUKSI":"ADJUSTMENT"}</span></td><td>${money(t.qty)}</td><td>${money(t.stokSebelum)}</td><td>${money(t.stokSesudah)}</td><td>${esc(t.userName)}</td></tr>`).join("")}</tbody></table></div></div>`).join("");
-}
+function transactionTable(rows){return `<div class="table-wrap"><table class="table"><thead><tr><th>Tanggal</th><th>Produk</th><th>Kode Produksi</th><th>Jenis</th><th>Qty</th><th>Sebelum</th><th>Sesudah</th><th>User</th></tr></thead><tbody>${rows.map(t=>`<tr><td>${dt(t.createdAt)}</td><td>${esc(t.namaProduk)}</td><td><b>${esc(t.kodeProduksi||"-")}</b></td><td><span class="badge">${t.type==="in"?"MASUK":t.type==="out"?"KELUAR":t.type==="production"?"PRODUKSI":"ADJUSTMENT"}</span></td><td>${money(t.qty)}</td><td>${money(t.stokSebelum)}</td><td>${money(t.stokSesudah)}</td><td>${esc(t.userName)}</td></tr>`).join("")||"<tr><td colspan=8>Belum ada transaksi</td></tr>"}</tbody></table></div>`}
 
 function renderProducts(){
  const admin=currentProfile.role==="admin";
@@ -271,9 +263,151 @@ window.openOpname=async id=>{
 }
 window.finalizeOpname=async id=>{if(!confirm("Finalisasi akan mengubah stok sistem menjadi stok fisik. Lanjutkan?"))return;let o=opnames.find(x=>x.id===id),snap=await getDocs(collection(db,"opnames",id,"details")),ds=snap.docs.map(x=>({id:x.id,...x.data()}));let batch=writeBatch(db);for(const d of ds){if(Number(d.difference||0)!==0){let pref=doc(db,"products",d.productId),tref=doc(collection(db,"stock_transactions"));batch.update(pref,{stok:Number(d.physicalStock)});batch.set(tref,{productId:d.productId,barcode:d.barcode,kodeProduk:d.kodeProduk,namaProduk:d.namaProduk,type:"adjustment",qty:Math.abs(Number(d.difference)),selisih:Number(d.difference),stokSebelum:Number(d.systemStock),stokSesudah:Number(d.physicalStock),keterangan:"Penyesuaian Stok Opname "+o.nomor,userId:currentUser.uid,userName:currentProfile.nama||currentUser.email,createdAt:serverTimestamp()})}}batch.update(doc(db,"opnames",id),{status:"final",finalizedAt:serverTimestamp(),finalizedBy:currentUser.uid,finalizedByName:currentProfile.nama||currentUser.email});await batch.commit();toast("Opname berhasil difinalisasi");renderOpname()}
 
-async function renderReports(){await loadProducts();await loadTransactions();await loadOpnames();$("content").innerHTML=`<div class="grid"><div class="card"><h3>📊 Laporan Inventory</h3><p>Download stok terkini dalam Excel.</p><button class="btn blue" id="exInv">Excel Inventory</button></div><div class="card"><h3>🔄 Laporan Transaksi</h3><p>Download seluruh riwayat stok.</p><button class="btn blue" id="exTrx">Excel Transaksi</button></div><div class="card"><h3>📝 Berita Acara Opname</h3><p>Pilih opname final/draft lalu cetak PDF.</p><select id="opSelect" style="padding:10px;width:100%;margin:10px 0"><option value="">Pilih opname</option>${opnames.map(o=>`<option value="${o.id}">${esc(o.nomor)} - ${esc(o.lokasi)}</option>`).join("")}</select><button class="btn primary" id="pdfOp">Download PDF</button></div></div>`;$("exInv").onclick=()=>exportExcel(products.map(p=>({Barcode:p.barcode,Kode:p.kodeProduk,Nama:p.namaProduk,Kategori:p.kategori,Stok:p.stok,Satuan:p.satuan,"Berat/Satuan":p.beratPerSatuan,"Stok LBS":p.stokLbs,Lokasi:p.lokasi,Status:p.aktif===false?"Nonaktif":"Aktif"})),"Inventory");$("exTrx").onclick=()=>exportExcel(transactions.map(t=>({Tanggal:dt(t.createdAt),Kode:t.kodeProduk,Nama:t.namaProduk,Jenis:t.type,Qty:t.qty,Sebelum:t.stokSebelum,Sesudah:t.stokSesudah,Keterangan:t.keterangan,User:t.userName})),"Transaksi");$("pdfOp").onclick=()=>{let id=$("opSelect").value;if(id)makeOpnamePDF(id);else alert("Pilih opname dulu")}}
-function exportExcel(rows,name){if(!window.XLSX)return alert("Library Excel belum termuat");let ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Data");XLSX.writeFile(wb,name+"_"+new Date().toISOString().slice(0,10)+".xlsx")}
-async function makeOpnamePDF(id){let o=opnames.find(x=>x.id===id),snap=await getDocs(collection(db,"opnames",id,"details")),ds=snap.docs.map(x=>x.data()),{jsPDF}=window.jspdf;let pdf=new jsPDF("p","mm","a4");pdf.setFontSize(15);pdf.text("PT LAMPUNG BAY SEAFOOD",105,15,{align:"center"});pdf.setFontSize(13);pdf.text("BERITA ACARA STOK OPNAME",105,23,{align:"center"});pdf.setFontSize(10);pdf.text("Nomor: "+o.nomor,15,34);pdf.text("Tanggal: "+dt(o.tanggal),15,41);pdf.text("Lokasi: "+o.lokasi,15,48);pdf.autoTable({startY:55,head:[["No","Kode","Nama Produk","Sistem","Fisik","Selisih","Satuan"]],body:ds.map((d,i)=>[i+1,d.kodeProduk,d.namaProduk,d.systemStock,d.physicalStock,d.difference,d.satuan]),styles:{fontSize:8},headStyles:{halign:"center"}});let y=pdf.lastAutoTable.finalY+15;pdf.text("Demikian Berita Acara Stok Opname ini dibuat untuk dipergunakan sebagaimana mestinya.",15,y,{maxWidth:180});pdf.text("Mengetahui,",45,y+18,{align:"center"});pdf.text("Petugas Opname,",155,y+18,{align:"center"});pdf.text("(________________)",45,y+48,{align:"center"});pdf.text("("+ (o.createdByName||"") +")",155,y+48,{align:"center"});pdf.save(o.nomor+".pdf")}
+function reportDate(v){
+  if(!v)return null;
+  if(v.toDate)return v.toDate();
+  const d=new Date(v); return isNaN(d)?null:d;
+}
+function reportDateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function reportDateLabel(key){const d=new Date(key+'T00:00:00');return d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}
+function reportCategories(){
+  return [...new Set(products.map(p=>(p.kategori||'Lainnya').trim()||'Lainnya'))].sort((a,b)=>a.localeCompare(b,'id'));
+}
+function categoryReportData(category){
+  const ps=products.filter(p=>(p.kategori||'Lainnya').trim()===category).sort((a,b)=>(a.namaProduk||'').localeCompare(b.namaProduk||'','id'));
+  const ids=new Set(ps.map(p=>p.id));
+  const tx=transactions.filter(t=>ids.has(t.productId)).map(t=>({...t,_d:reportDate(t.createdAt)})).filter(t=>t._d).sort((a,b)=>a._d-b._d);
+  const dates=[...new Set(tx.map(t=>reportDateKey(t._d)))].sort();
+  const rows=[];
+  const running={};
+  ps.forEach(p=>running[p.id]=0);
+  for(const key of dates){
+    const day=tx.filter(t=>reportDateKey(t._d)===key);
+    const inMap={},outMap={};
+    ps.forEach(p=>{inMap[p.id]=0;outMap[p.id]=0});
+    let note=[];
+    day.forEach(t=>{
+      const q=Number(t.qty||0);
+      if(t.type==='in'||t.type==='production') inMap[t.productId]=(inMap[t.productId]||0)+q;
+      else if(t.type==='out') outMap[t.productId]=(outMap[t.productId]||0)+q;
+      else if(t.type==='adjustment'){
+        const diff=Number(t.selisih||0);
+        if(diff>0) inMap[t.productId]=(inMap[t.productId]||0)+diff;
+        else if(diff<0) outMap[t.productId]=(outMap[t.productId]||0)+Math.abs(diff);
+      }
+      if(t.keterangan) note.push(t.keterangan);
+    });
+    // Use the latest stock-after transaction on the date when available; otherwise roll forward.
+    ps.forEach(p=>{
+      const pday=day.filter(t=>t.productId===p.id).sort((a,b)=>a._d-b._d);
+      if(pday.length) running[p.id]=Number(pday[pday.length-1].stokSesudah ?? running[p.id]);
+      else running[p.id]=Number(running[p.id]||0);
+    });
+    rows.push({date:key,inMap,outMap,stockMap:{...running},totalIn:ps.reduce((a,p)=>a+(inMap[p.id]||0),0),totalOut:ps.reduce((a,p)=>a+(outMap[p.id]||0),0),note:[...new Set(note)].join('; ')});
+  }
+  // If there are no transactions, still expose the current stock as one snapshot.
+  if(!rows.length){
+    rows.push({date:reportDateKey(new Date()),inMap:{},outMap:{},stockMap:Object.fromEntries(ps.map(p=>[p.id,Number(p.stok||0)])),totalIn:0,totalOut:0,note:'Saldo saat ini'});
+  }
+  return {category,products:ps,rows};
+}
+function reportTableRows(data){
+  const {products:ps,rows}=data;
+  return rows.map(r=>({
+    tanggal:reportDateLabel(r.date),
+    masuk:ps.map(p=>Number(r.inMap[p.id]||0)),
+    keluar:ps.map(p=>Number(r.outMap[p.id]||0)),
+    stok:ps.map(p=>Number(r.stockMap[p.id]||0)),
+    totalIn:r.totalIn,totalOut:r.totalOut,note:r.note||''
+  }));
+}
+function safeSheetName(name){return String(name||'Kategori').replace(/[\\/?*\[\]:]/g,' ').slice(0,31)||'Kategori'}
+function exportCategoryExcel(data){
+  if(!window.XLSX)return alert('Library Excel belum termuat');
+  const ps=data.products, rows=reportTableRows(data), wb=XLSX.utils.book_new();
+  const aoa=[];
+  aoa.push(['PT LAMPUNG BAY SEAFOOD']);
+  aoa.push([`INVENTORY ${data.category}`]);
+  aoa.push([]);
+  aoa.push(['Tanggal','Jenis',...ps.map(p=>p.namaProduk||p.kodeProduk||'Produk'),'Total','Note']);
+  for(const r of rows){
+    aoa.push([r.tanggal,'IN',...r.masuk,r.totalIn,r.note]);
+    aoa.push([r.tanggal,'OUT',...r.keluar,r.totalOut,r.note]);
+    aoa.push([r.tanggal,'TOTAL STOK',...r.stok,r.stok.reduce((a,b)=>a+b,0),'']);
+  }
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  const endCol=ps.length+3;
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:endCol}},{s:{r:1,c:0},e:{r:1,c:endCol}}];
+  ws['!cols']=[{wch:15},{wch:12},...ps.map(()=>({wch:15})),{wch:12},{wch:28}];
+  XLSX.utils.book_append_sheet(wb,ws,safeSheetName(data.category));
+  XLSX.writeFile(wb,`Laporan_Inventory_${safeSheetName(data.category)}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+function exportAllCategoriesExcel(){
+  if(!window.XLSX)return alert('Library Excel belum termuat');
+  const wb=XLSX.utils.book_new();
+  for(const category of reportCategories()){
+    const data=categoryReportData(category),ps=data.products,rows=reportTableRows(data),aoa=[];
+    aoa.push(['PT LAMPUNG BAY SEAFOOD']);aoa.push([`INVENTORY ${category}`]);aoa.push([]);
+    aoa.push(['Tanggal','Jenis',...ps.map(p=>p.namaProduk||p.kodeProduk||'Produk'),'Total','Note']);
+    for(const r of rows){aoa.push([r.tanggal,'IN',...r.masuk,r.totalIn,r.note]);aoa.push([r.tanggal,'OUT',...r.keluar,r.totalOut,r.note]);aoa.push([r.tanggal,'TOTAL STOK',...r.stok,r.stok.reduce((a,b)=>a+b,0),'']);}
+    const ws=XLSX.utils.aoa_to_sheet(aoa),endCol=ps.length+3;
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:endCol}},{s:{r:1,c:0},e:{r:1,c:endCol}}];
+    ws['!cols']=[{wch:15},{wch:12},...ps.map(()=>({wch:15})),{wch:12},{wch:28}];
+    XLSX.utils.book_append_sheet(wb,ws,safeSheetName(category));
+  }
+  XLSX.writeFile(wb,`Laporan_Inventory_Semua_Kategori_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+function makeCategoryPDF(data){
+  const {jsPDF}=window.jspdf;if(!jsPDF)return alert('Library PDF belum termuat');
+  const ps=data.products,rows=reportTableRows(data);
+  const pdf=new jsPDF('l','mm','a3');
+  pdf.setFontSize(16);pdf.text('PT LAMPUNG BAY SEAFOOD',148.5,13,{align:'center'});
+  pdf.setFontSize(14);pdf.text(`INVENTORY ${data.category}`,148.5,21,{align:'center'});
+  pdf.setFontSize(9);pdf.text(`Dicetak: ${new Date().toLocaleString('id-ID')}`,12,28);
+  const head1=['Tanggal','',...ps.map(()=>''),'Total','Note'];
+  const head2=['Tanggal','Jenis',...ps.map(p=>p.namaProduk||p.kodeProduk||'Produk'),'Total','Note'];
+  const body=[];
+  rows.forEach(r=>{body.push([r.tanggal,'IN',...r.masuk,r.totalIn,r.note]);body.push([r.tanggal,'OUT',...r.keluar,r.totalOut,r.note]);body.push([r.tanggal,'TOTAL STOK',...r.stok,r.stok.reduce((a,b)=>a+b,0),'']);});
+  const prodStart=2,prodEnd=1+ps.length;
+  const inOutWidths=ps.map(()=>Math.max(12,Math.min(22,180/Math.max(ps.length,1))));
+  pdf.autoTable({startY:32,head:[head2],body,theme:'grid',styles:{fontSize:7,cellPadding:2,halign:'center',valign:'middle'},headStyles:{fontSize:7,halign:'center',fillColor:[31,78,121],textColor:255},columnStyles:{0:{cellWidth:18},1:{cellWidth:16},[prodEnd+1]:{cellWidth:16},[prodEnd+2]:{cellWidth:35,halign:'left'}},didParseCell:(d)=>{if(d.section==='body'&&d.column.index===1){if(d.cell.raw==='IN')d.cell.styles.fillColor=[0,220,0];if(d.cell.raw==='OUT')d.cell.styles.fillColor=[255,80,80];if(d.cell.raw==='TOTAL STOK')d.cell.styles.fillColor=[180,255,120];}}});
+  // Add visual group labels above the product columns, matching the requested inventory layout.
+  const y=32;
+  const table=pdf.lastAutoTable;
+  const startX=table.settings.margin.left;
+  const dateW=18,typeW=16,prodW=(table.table.width-dateW-typeW-16-35)/Math.max(ps.length,1);
+  pdf.setFillColor(0,230,0);pdf.rect(startX+dateW+typeW,y-7,prodW*ps.length,7,'F');pdf.setTextColor(0);pdf.setFontSize(8);pdf.text('IN / OUT / TOTAL STOK',startX+dateW+typeW+(prodW*ps.length)/2,y-2.2,{align:'center'});
+  pdf.save(`Laporan_Inventory_${safeSheetName(data.category)}_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+function makeAllCategoriesPDF(){
+  const {jsPDF}=window.jspdf;if(!jsPDF)return alert('Library PDF belum termuat');
+  const cats=reportCategories();if(!cats.length)return alert('Belum ada kategori produk');
+  const pdf=new jsPDF('l','mm','a3');
+  cats.forEach((category,idx)=>{
+    if(idx)pdf.addPage();
+    const data=categoryReportData(category),ps=data.products,rows=reportTableRows(data);
+    pdf.setFontSize(16);pdf.text('PT LAMPUNG BAY SEAFOOD',148.5,13,{align:'center'});pdf.setFontSize(14);pdf.text(`INVENTORY ${category}`,148.5,21,{align:'center'});pdf.setFontSize(9);pdf.text(`Dicetak: ${new Date().toLocaleString('id-ID')}`,12,28);
+    const body=[];rows.forEach(r=>{body.push([r.tanggal,'IN',...r.masuk,r.totalIn,r.note]);body.push([r.tanggal,'OUT',...r.keluar,r.totalOut,r.note]);body.push([r.tanggal,'TOTAL STOK',...r.stok,r.stok.reduce((a,b)=>a+b,0),'']);});
+    pdf.autoTable({startY:32,head:[['Tanggal','Jenis',...ps.map(p=>p.namaProduk||p.kodeProduk||'Produk'),'Total','Note']],body,theme:'grid',styles:{fontSize:7,cellPadding:2,halign:'center',valign:'middle'},headStyles:{fontSize:7,halign:'center',fillColor:[31,78,121],textColor:255},columnStyles:{0:{cellWidth:18},1:{cellWidth:16},[ps.length+2]:{cellWidth:16},[ps.length+3]:{cellWidth:35,halign:'left'}},didParseCell:(d)=>{if(d.section==='body'&&d.column.index===1){if(d.cell.raw==='IN')d.cell.styles.fillColor=[0,220,0];if(d.cell.raw==='OUT')d.cell.styles.fillColor=[255,80,80];if(d.cell.raw==='TOTAL STOK')d.cell.styles.fillColor=[180,255,120];}}});
+  });
+  pdf.save(`Laporan_Inventory_Semua_Kategori_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+async function renderReports(){
+  await loadProducts();await loadTransactions();await loadOpnames();
+  const cats=reportCategories();
+  $('content').innerHTML=`
+    <div class="card">
+      <div class="toolbar"><div><h3>📊 Laporan Inventory per Kategori</h3><p class="small">Setiap kategori dibuat seperti format inventory: tanggal, IN, OUT, dan TOTAL STOK. Data berasal dari transaksi Firebase.</p></div><div class="actions"><button class="btn blue" id="allCatExcel">⬇ Excel Semua Kategori</button><button class="btn primary" id="allCatPdf">⬇ PDF Semua Kategori</button></div></div>
+    </div>
+    <div class="grid" style="margin-top:14px">${cats.map((c,i)=>{const d=categoryReportData(c);const total=d.products.reduce((a,p)=>a+Number(p.stok||0),0);return `<div class="card"><div class="section-title"><div><h3>📦 ${esc(c)}</h3><p>${d.products.length} produk • Total stok saat ini: <b>${money(total)}</b></p></div></div><div class="small" style="margin:8px 0 14px">Kolom produk mengikuti isi kategori dan riwayat IN/OUT akan ditampilkan per tanggal.</div><div class="actions"><button class="btn blue cat-excel" data-cat="${encodeURIComponent(c)}">Excel</button><button class="btn primary cat-pdf" data-cat="${encodeURIComponent(c)}">PDF</button></div></div>`}).join('')||'<div class="card"><p>Belum ada produk/kategori.</p></div>'}</div>
+    <div class="grid" style="margin-top:14px"><div class="card"><h3>🔄 Laporan Transaksi</h3><p>Download seluruh riwayat stok.</p><button class="btn blue" id="exTrx">Excel Transaksi</button></div><div class="card"><h3>📝 Berita Acara Opname</h3><p>Pilih opname final/draft lalu cetak PDF.</p><select id="opSelect" style="padding:10px;width:100%;margin:10px 0"><option value="">Pilih opname</option>${opnames.map(o=>`<option value="${o.id}">${esc(o.nomor)} - ${esc(o.lokasi)}</option>`).join('')}</select><button class="btn primary" id="pdfOp">Download PDF</button></div></div>`;
+  $('allCatExcel').onclick=exportAllCategoriesExcel;
+  $('allCatPdf').onclick=makeAllCategoriesPDF;
+  document.querySelectorAll('.cat-excel').forEach(b=>b.onclick=()=>exportCategoryExcel(categoryReportData(decodeURIComponent(b.dataset.cat))));
+  document.querySelectorAll('.cat-pdf').forEach(b=>b.onclick=()=>makeCategoryPDF(categoryReportData(decodeURIComponent(b.dataset.cat))));
+  $('exTrx').onclick=()=>exportExcel(transactions.map(t=>({Tanggal:dt(t.createdAt),Kode:t.kodeProduk,Nama:t.namaProduk,Jenis:t.type,Qty:t.qty,Sebelum:t.stokSebelum,Sesudah:t.stokSesudah,Keterangan:t.keterangan,User:t.userName})),"Transaksi");
+  $('pdfOp').onclick=()=>{let id=$('opSelect').value;if(id)makeOpnamePDF(id);else alert('Pilih opname dulu')};
+}
 async function renderUsers(){await loadCategories();let us=(await getDocs(collection(db,"users"))).docs.map(x=>({id:x.id,...x.data()}));$("content").innerHTML=`<div class="card"><div class="toolbar"><div><h3>Pengguna</h3><p class="small">Kelola profil role yang sudah memiliki akun Authentication.</p></div><button class="btn primary" id="newUser">+ Buat Operator</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Aktif</th><th>Aksi</th></tr></thead><tbody>${us.map(u=>`<tr><td>${esc(u.nama)}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td><td>${u.aktif?"Aktif":"Nonaktif"}</td><td><button class="btn" onclick="editUser('${u.id}')">Edit</button></td></tr>`).join("")}</tbody></table></div></div>`;$("newUser").onclick=newUser}
 async function newUser(){openModal(`<h2>Buat Akun Operator</h2><div class="notice">Akun dibuat melalui Firebase Authentication, lalu profil operator disimpan ke Firestore.</div><form id="userForm"><div class="form-grid">${field("nama","Nama","","required")}${field("email","Email","","required","email")}${field("password","Password","","required","password")}</div><div class="actions"><button class="btn primary">Buat Akun</button></div></form>`);$("userForm").onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target);try{const secondary=initializeApp(firebaseConfig,"secondary-"+Date.now());const a2=getAuth(secondary);let cred=await createUserWithEmailAndPassword(a2,f.get("email"),f.get("password"));await setDoc(doc(db,"users",cred.user.uid),{nama:f.get("nama"),email:f.get("email"),role:"operator",aktif:true,createdAt:serverTimestamp()});await signOut(a2);closeModal();toast("Operator berhasil dibuat");renderUsers()}catch(err){alert("Gagal membuat operator: "+err.message)}}}
 window.editUser=async id=>{let s=await getDoc(doc(db,"users",id)),u=s.data();openModal(`<h2>Edit Pengguna</h2><form id="editUser"><div class="form-grid">${field("nama","Nama",u.nama||"","required")}${field("email","Email",u.email||"","required","email")}<div class="form-group"><label>Role</label><select name="role"><option value="admin" ${u.role==="admin"?"selected":""}>Admin</option><option value="operator" ${u.role==="operator"?"selected":""}>Operator</option></select></div><div class="form-group"><label>Status</label><select name="aktif"><option value="true" ${u.aktif!==false?"selected":""}>Aktif</option><option value="false" ${u.aktif===false?"selected":""}>Nonaktif</option></select></div></div><div class="actions"><button class="btn primary">Simpan</button></div></form>`);$("editUser").onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target);await updateDoc(doc(db,"users",id),{nama:f.get("nama"),email:f.get("email"),role:f.get("role"),aktif:f.get("aktif")==="true",updatedAt:serverTimestamp()});closeModal();toast("Pengguna diperbarui");renderUsers()}}
