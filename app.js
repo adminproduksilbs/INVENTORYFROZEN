@@ -297,26 +297,60 @@ function categoryReportData(category){
       }
       if(t.keterangan) note.push(t.keterangan);
     });
-    // TOTAL STOK follows the reference report: cumulative IN minus cumulative OUT per product.
-    // This makes each date show the running stock balance (e.g. 268 - 241 = 27).
+    // Build historical running stock without allowing a negative balance caused by
+    // the report starting in the middle of an inventory cycle. We first calculate
+    // each product's cumulative net movement and derive the minimum opening balance
+    // needed to keep every historical balance at zero or above.
     ps.forEach(p=>{
-      running[p.id]=Number(running[p.id]||0)+(Number(inMap[p.id]||0)-Number(outMap[p.id]||0));
+      const net=Number(inMap[p.id]||0)-Number(outMap[p.id]||0);
+      running[p.id]=Number(running[p.id]||0)+net;
+    });
+    // `running` temporarily stores cumulative net movement. Rebuild it from the
+    // beginning using a non-negative opening balance for each product.
+    if(key===dates[0]){
+      ps.forEach(p=>{
+        const cumulativeBefore=0;
+        const firstNet=Number(inMap[p.id]||0)-Number(outMap[p.id]||0);
+        p.__reportOpening=Math.max(0,-firstNet);
+      });
+    }
+    // Recompute stock for this row from all rows already processed.
+    ps.forEach(p=>{
+      const opening=Number(p.__reportOpening||0);
+      let balance=opening;
+      for(const prevKey of dates.slice(0,dates.indexOf(key)+1)){
+        const prevDay=tx.filter(t=>reportDateKey(t._d)===prevKey && t.productId===p.id);
+        prevDay.forEach(t=>{
+          const q=Number(t.qty||0);
+          if(t.type==='in'||t.type==='production') balance+=q;
+          else if(t.type==='out') balance-=q;
+          else if(t.type==='adjustment') balance+=Number(t.selisih||0);
+        });
+      }
+      running[p.id]=Math.max(0,balance);
     });
     const totalStock=ps.reduce((a,p)=>a+Number(running[p.id]||0),0);
     rows.push({date:key,inMap,outMap,stockMap:{...running},totalIn:totalStock,totalOut:ps.reduce((a,p)=>a+(outMap[p.id]||0),0),totalStock,note:[...new Set(note)].join('; ')});
   }
   // The last report date must match the current product stock in Firebase.
-  // Historical rows remain cumulative IN minus OUT, while the final row is
-  // synchronized to the live `produk.stok` value so the report's last TOTAL STOK
-  // is the same quantity shown on the Produk page.
+  // This is the authoritative closing balance shown on the Produk page.
   if(rows.length){
     const last=rows[rows.length-1];
-    ps.forEach(p=>{ last.stockMap[p.id]=Number(p.stok||0); });
+    let reconciled=false;
+    ps.forEach(p=>{
+      const actual=Number(p.stok||0);
+      if(Number(last.stockMap[p.id]||0)!==actual) reconciled=true;
+      last.stockMap[p.id]=actual;
+      delete p.__reportOpening;
+    });
     last.totalStock=ps.reduce((a,p)=>a+Number(p.stok||0),0);
     last.totalIn=last.totalStock;
+    if(reconciled) last.note=[last.note,'Rekonsiliasi stok aktual'].filter(Boolean).join('; ');
   } else {
+    ps.forEach(p=>delete p.__reportOpening);
     rows.push({date:reportDateKey(new Date()),inMap:{},outMap:{},stockMap:Object.fromEntries(ps.map(p=>[p.id,Number(p.stok||0)])),totalIn:ps.reduce((a,p)=>a+Number(p.stok||0),0),totalOut:0,totalStock:ps.reduce((a,p)=>a+Number(p.stok||0),0),note:'Saldo saat ini'});
   }
+  ps.forEach(p=>delete p.__reportOpening);
   return {category,products:ps,rows};
 }
 function reportTableRows(data){
