@@ -297,13 +297,13 @@ function categoryReportData(category){
       }
       if(t.keterangan) note.push(t.keterangan);
     });
-    // Use the latest stock-after transaction on the date when available; otherwise roll forward.
+    // TOTAL STOK follows the reference report: cumulative IN minus cumulative OUT per product.
+    // This makes each date show the running stock balance (e.g. 268 - 241 = 27).
     ps.forEach(p=>{
-      const pday=day.filter(t=>t.productId===p.id).sort((a,b)=>a._d-b._d);
-      if(pday.length) running[p.id]=Number(pday[pday.length-1].stokSesudah ?? running[p.id]);
-      else running[p.id]=Number(running[p.id]||0);
+      running[p.id]=Number(running[p.id]||0)+(Number(inMap[p.id]||0)-Number(outMap[p.id]||0));
     });
-    rows.push({date:key,inMap,outMap,stockMap:{...running},totalIn:ps.reduce((a,p)=>a+(inMap[p.id]||0),0),totalOut:ps.reduce((a,p)=>a+(outMap[p.id]||0),0),note:[...new Set(note)].join('; ')});
+    const totalStock=ps.reduce((a,p)=>a+Number(running[p.id]||0),0);
+    rows.push({date:key,inMap,outMap,stockMap:{...running},totalIn:totalStock,totalOut:ps.reduce((a,p)=>a+(outMap[p.id]||0),0),totalStock,note:[...new Set(note)].join('; ')});
   }
   // If there are no transactions, still expose the current stock as one snapshot.
   if(!rows.length){
