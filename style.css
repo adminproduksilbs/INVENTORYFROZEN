@@ -28,3 +28,18 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;border:0}.hidden
 .product-category-group .product-item-row:hover td{background:#f8fbff}
 
 .product-detail-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}.product-detail-actions{display:flex;gap:8px}.product-detail-stats{margin:0 0 14px;grid-template-columns:repeat(3,minmax(0,1fr))}.product-detail-stats .kpi{min-height:auto;padding:14px}.product-detail-stats .kpi span{font-size:12px;color:#64748b}.product-detail-stats .kpi strong{font-size:18px}@media(max-width:700px){.product-detail-head{flex-direction:column}.product-detail-actions{width:100%}.product-detail-actions .btn{width:100%}.product-detail-stats{grid-template-columns:1fr}.product-detail-head h2{font-size:20px}}
+
+/* Laporan inventory per kategori */
+.report-category-card{overflow:hidden}
+.report-preview-wrap{overflow-x:auto;margin-top:14px;border:1px solid #cbd5e1;border-radius:10px}
+.report-preview{width:100%;min-width:900px;border-collapse:collapse;font-size:12px;background:#fff}
+.report-preview th,.report-preview td{border:1px solid #cbd5e1;padding:7px 8px;text-align:center;white-space:nowrap}
+.report-preview thead th{background:#1f4e79;color:#fff;font-weight:700}
+.report-preview thead .rp-title{font-size:13px}
+.report-preview .rp-date{min-width:105px}
+.report-preview .rp-note{text-align:left;min-width:180px}
+.report-preview tbody td:first-child{text-align:left;font-weight:600;background:#f8fafc}
+.report-preview .rp-in{background:#dcffd8}
+.report-preview .rp-out{background:#ffe0e0}
+.report-preview .rp-stock{background:#fff4b8;font-weight:700}
+@media(max-width:700px){.report-category-card .toolbar{align-items:flex-start;flex-direction:column}.report-category-card .actions{width:100%}.report-category-card .actions .btn{flex:1}}
