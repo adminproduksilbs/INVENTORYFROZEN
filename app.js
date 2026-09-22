@@ -305,9 +305,17 @@ function categoryReportData(category){
     const totalStock=ps.reduce((a,p)=>a+Number(running[p.id]||0),0);
     rows.push({date:key,inMap,outMap,stockMap:{...running},totalIn:totalStock,totalOut:ps.reduce((a,p)=>a+(outMap[p.id]||0),0),totalStock,note:[...new Set(note)].join('; ')});
   }
-  // If there are no transactions, still expose the current stock as one snapshot.
-  if(!rows.length){
-    rows.push({date:reportDateKey(new Date()),inMap:{},outMap:{},stockMap:Object.fromEntries(ps.map(p=>[p.id,Number(p.stok||0)])),totalIn:0,totalOut:0,note:'Saldo saat ini'});
+  // The last report date must match the current product stock in Firebase.
+  // Historical rows remain cumulative IN minus OUT, while the final row is
+  // synchronized to the live `produk.stok` value so the report's last TOTAL STOK
+  // is the same quantity shown on the Produk page.
+  if(rows.length){
+    const last=rows[rows.length-1];
+    ps.forEach(p=>{ last.stockMap[p.id]=Number(p.stok||0); });
+    last.totalStock=ps.reduce((a,p)=>a+Number(p.stok||0),0);
+    last.totalIn=last.totalStock;
+  } else {
+    rows.push({date:reportDateKey(new Date()),inMap:{},outMap:{},stockMap:Object.fromEntries(ps.map(p=>[p.id,Number(p.stok||0)])),totalIn:ps.reduce((a,p)=>a+Number(p.stok||0),0),totalOut:0,totalStock:ps.reduce((a,p)=>a+Number(p.stok||0),0),note:'Saldo saat ini'});
   }
   return {category,products:ps,rows};
 }
