@@ -130,11 +130,11 @@ window.openProduct=async id=>{
  await loadTransactions();
  const txs=transactions.filter(t=>t.productId===id);
  const batches={};
- txs.filter(t=>t.kodeProduksi).forEach(t=>{const code=String(t.kodeProduksi).trim();if(!code)return;batches[code]=(batches[code]||0)+(t.type==="production"?Number(t.qty||0):t.type==="out"?-Number(t.qty||0):0)});
+ txs.filter(t=>t.kodeProduksi).forEach(t=>{const code=String(t.kodeProduksi).trim();if(!code)return;batches[code]=(batches[code]||0)+(t.type==="production"||t.type==="in"?Number(t.qty||0):t.type==="out"?-Number(t.qty||0):0)});
  const batchRows=Object.entries(batches).filter(([,v])=>Math.abs(v)>0.000001).sort((a,b)=>a[0].localeCompare(b[0]));
  const reasonLabel=t=>t.jenisKeluar?`<span class="badge">${esc(t.jenisKeluar)}</span>`:'';
  const history=txs.slice(0,40);
- openModal(`<div class="product-detail-head"><div><div class="small">Detail Produk</div><h2 style="margin:4px 0">${esc(p.namaProduk)}</h2><p class="small">${esc(p.kodeProduk||'-')} · Barcode: ${esc(p.barcode||'-')}</p></div><div class="product-detail-actions"><button class="btn red" onclick="closeModal();stockForm('${p.id}','out')">− Keluarkan Stok</button></div></div>
+ openModal(`<div class="product-detail-head"><div><div class="small">Detail Produk</div><h2 style="margin:4px 0">${esc(p.namaProduk)}</h2><p class="small">${esc(p.kodeProduk||'-')} · Barcode: ${esc(p.barcode||'-')}</p></div><div class="product-detail-actions"><button class="btn red" onclick="closeModal();stockForm('${p.id}','out')">− Keluarkan Stok</button><button class="btn blue" onclick="closeModal();transferStockForm('${p.id}')">⇄ Pindah Stok</button></div></div>
  <div class="stats product-detail-stats"><div class="card kpi"><span>Total Stok</span><strong>${money(p.stok)} ${esc(p.satuan||'')}</strong></div><div class="card kpi"><span>Kategori</span><strong>${esc(p.kategori||'-')}</strong></div><div class="card kpi"><span>Lokasi</span><strong>${esc(p.lokasi||'-')}</strong></div></div>
  <div class="card" style="margin:14px 0"><div class="section-title"><div><h3>📦 Komposisi Stok per Kode Produksi</h3><p class="small">Stok yang masih terlacak pada masing-masing batch.</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>Kode Produksi</th><th>Hasil Produksi</th><th>Stok Keluar</th><th>Sisa</th><th>Satuan</th></tr></thead><tbody>${batchRows.map(([code,bal])=>{const made=txs.filter(t=>t.type==='production'&&String(t.kodeProduksi||'').trim()===code).reduce((a,t)=>a+Number(t.qty||0),0);const out=txs.filter(t=>t.type==='out'&&String(t.kodeProduksi||'').trim()===code).reduce((a,t)=>a+Number(t.qty||0),0);return `<tr><td><b>${esc(code)}</b></td><td>${money(made)}</td><td>${money(out)}</td><td><strong>${money(bal)}</strong></td><td>${esc(p.satuan||'')}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">Belum ada kode produksi yang terlacak.</td></tr>'}</tbody></table></div></div>
  <div class="card"><div class="section-title"><div><h3>🧾 Riwayat Produk</h3><p class="small">Produksi, stok masuk/keluar, dan penyesuaian.</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>Tanggal</th><th>Jenis</th><th>Kode Produksi</th><th>Qty</th><th>Keperluan</th><th>Keterangan</th><th>User</th></tr></thead><tbody>${history.map(t=>{const typ=t.type==='production'?'PRODUKSI':t.type==='in'?'MASUK':t.type==='out'?'KELUAR':'ADJUSTMENT';return `<tr><td>${dt(t.createdAt)}</td><td><span class="badge">${typ}</span></td><td>${esc(t.kodeProduksi||'-')}</td><td>${t.type==='out'?'-':'+'}${money(t.qty)}</td><td>${reasonLabel(t)||'-'}</td><td>${esc(t.keterangan||'-')}</td><td>${esc(t.userName||'-')}</td></tr>`}).join('')||'<tr><td colspan="7" class="empty">Belum ada transaksi.</td></tr>'}</tbody></table></div></div>`);
@@ -151,12 +151,12 @@ window.removeProduct=async id=>{if(!confirm("Hapus produk ini?"))return;await de
 function field(n,l,v,req="",type="text",step=""){return `<div class="form-group"><label>${l}</label><input name="${n}" type="${type}" value="${esc(v)}" ${req} ${step?`step="${step}"`:""}></div>`}
 
 async function renderInventory(){await loadProducts();$("content").innerHTML=`<div class="card"><div class="toolbar"><div><h3>Inventory</h3><p class="small">Stok terkini seluruh produk.</p></div><input id="invSearch" class="search" placeholder="Cari produk..."></div><div id="invTable"></div></div>`;drawInv("");$("invSearch").oninput=e=>drawInv(e.target.value)}
-function drawInv(q){q=q.toLowerCase();let rows=products.filter(p=>[p.barcode,p.kodeProduk,p.namaProduk,p.kategori].some(x=>String(x||"").toLowerCase().includes(q)));$("invTable").innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>Kode</th><th>Nama</th><th>Barcode</th><th>Stok</th><th>Satuan</th><th>LBS</th><th>Lokasi</th><th>Aksi</th></tr></thead><tbody>${rows.map(p=>`<tr><td>${esc(p.kodeProduk)}</td><td>${esc(p.namaProduk)}</td><td>${esc(p.barcode)}</td><td><b>${money(p.stok)}</b></td><td>${esc(p.satuan)}</td><td>${money(p.stokLbs)}</td><td>${esc(p.lokasi)}</td><td><button class="btn green" onclick="stockForm('${p.id}','in')">+ Masuk</button> <button class="btn red" onclick="stockForm('${p.id}','out')">− Keluar</button></td></tr>`).join("")||"<tr><td colspan=8>Tidak ada data</td></tr>"}</tbody></table></div>`}
+function drawInv(q){q=q.toLowerCase();let rows=products.filter(p=>[p.barcode,p.kodeProduk,p.namaProduk,p.kategori].some(x=>String(x||"").toLowerCase().includes(q)));$("invTable").innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>Kode</th><th>Nama</th><th>Barcode</th><th>Stok</th><th>Satuan</th><th>LBS</th><th>Lokasi</th><th>Aksi</th></tr></thead><tbody>${rows.map(p=>`<tr><td>${esc(p.kodeProduk)}</td><td>${esc(p.namaProduk)}</td><td>${esc(p.barcode)}</td><td><b>${money(p.stok)}</b></td><td>${esc(p.satuan)}</td><td>${money(p.stokLbs)}</td><td>${esc(p.lokasi)}</td><td><button class="btn green" onclick="stockForm('${p.id}','in')">+ Masuk</button> <button class="btn red" onclick="stockForm('${p.id}','out')">− Keluar</button> <button class="btn blue" onclick="transferStockForm('${p.id}')">⇄ Pindah</button></td></tr>`).join("")||"<tr><td colspan=8>Tidak ada data</td></tr>"}</tbody></table></div>`}
 window.stockForm=async(id,type)=>{
  let p=products.find(x=>x.id===id); if(!p)return;
  await loadTransactions();
  const batches={};
- transactions.filter(t=>t.productId===id&&t.kodeProduksi).forEach(t=>{const code=String(t.kodeProduksi).trim();if(!code)return;batches[code]=(batches[code]||0)+(t.type==="production"?Number(t.qty||0):t.type==="out"?-Number(t.qty||0):0)});
+ transactions.filter(t=>t.productId===id&&t.kodeProduksi).forEach(t=>{const code=String(t.kodeProduksi).trim();if(!code)return;batches[code]=(batches[code]||0)+(t.type==="production"||t.type==="in"?Number(t.qty||0):t.type==="out"?-Number(t.qty||0):0)});
  const available=Object.entries(batches).filter(([,v])=>v>0.000001).sort((a,b)=>a[0].localeCompare(b[0]));
  const batchField=type==="out"?`<div class="form-group"><label>Kode Produksi <span class="small">(stok yang dikeluarkan)</span></label><select name="kodeProduksi"><option value="">Tanpa Kode Produksi</option>${available.map(([code,bal])=>`<option value="${esc(code)}">${esc(code)} — ${money(bal)} ${esc(p.satuan||"MC")}</option>`).join("")}</select></div>`:`<div class="form-group"><label>Kode Produksi</label><input name="kodeProduksi" placeholder="Contoh: 960726A" required></div>`;
  const reasonField=type==="out"?`<div class="form-group"><label>Keperluan</label><select name="jenisKeluar"><option value="Sample">Sample</option><option value="Karantina">Karantina</option><option value="QC / Testing">QC / Testing</option><option value="Rusak">Rusak</option><option value="Internal">Internal</option><option value="Lainnya">Lainnya</option></select></div>`:'';
@@ -164,10 +164,46 @@ window.stockForm=async(id,type)=>{
  $("saveStock").onclick=async()=>{const form=$("stockForm"),qty=Number(form.querySelector('[name=qty]').value),ket=form.querySelector('[name=keterangan]').value.trim(),kode=(form.querySelector('[name=kodeProduksi]')?.value||'').trim(),jenisKeluar=(form.querySelector('[name=jenisKeluar]')?.value||'').trim();if(qty<=0)return alert("Jumlah harus lebih dari 0");if(type==="in"&&!kode)return alert("Kode Produksi wajib diisi untuk Stok Masuk.");if(type==="out"&&kode){const bal=batches[kode]||0;if(qty>bal+1e-9)return alert(`Stok batch ${kode} hanya tersisa ${money(bal)} ${p.satuan}.`)}try{await runTransaction(db,async tx=>{let ref=doc(db,"products",id),snap=await tx.get(ref);if(!snap.exists())throw Error("Produk tidak ditemukan");let d=snap.data(),before=Number(d.stok||0),after=type==="in"?before+qty:before-qty;if(after<0)throw Error("Stok tidak mencukupi");let tr=doc(collection(db,"stock_transactions"));tx.update(ref,{stok:after});tx.set(tr,{productId:id,barcode:d.barcode||"",kodeProduk:d.kodeProduk||"",namaProduk:d.namaProduk||"",kodeProduksi:kode,type,qty,stokSebelum:before,stokSesudah:after,keterangan:ket,jenisKeluar:jenisKeluar||null,userId:currentUser.uid,userName:currentProfile.nama||currentUser.email,createdAt:serverTimestamp()})});closeModal();toast("Transaksi berhasil");renderInventory()}catch(e){alert("Gagal: "+e.message)}}
 }
 
+window.transferStockForm=async sourceId=>{
+ let source=products.find(x=>x.id===sourceId); if(!source)return;
+ await loadProducts(); await loadTransactions();
+ const batches={};
+ transactions.filter(t=>t.productId===sourceId&&t.kodeProduksi).forEach(t=>{
+   const code=String(t.kodeProduksi).trim(); if(!code)return;
+   batches[code]=(batches[code]||0)+(t.type==="production"||t.type==="in"?Number(t.qty||0):t.type==="out"?-Number(t.qty||0):0);
+ });
+ const available=Object.entries(batches).filter(([,v])=>v>0.000001).sort((a,b)=>a[0].localeCompare(b[0]));
+ const dests=products.filter(p=>p.id!==sourceId).sort((a,b)=>String(a.namaProduk||'').localeCompare(String(b.namaProduk||''),'id'));
+ openModal(`<h2>⇄ Pindah Stok</h2>
+ <div class="notice"><b>Dari: ${esc(source.namaProduk)}</b><br>Stok saat ini: ${money(source.stok)} ${esc(source.satuan||'')}</div>
+ <form id="transferForm"><div class="form-grid">
+ <div class="form-group"><label>Ke Produk</label><select name="destProduct" required><option value="">Pilih produk tujuan</option>${dests.map(p=>`<option value="${esc(p.id)}">${esc(p.namaProduk)} — ${esc(p.kodeProduk||'')} — stok ${money(p.stok)} ${esc(p.satuan||'')}</option>`).join('')}</select></div>
+ <div class="form-group"><label>Kode Produksi Sumber</label><select name="sourceBatch"><option value="">Tanpa kode produksi</option>${available.map(([code,bal])=>`<option value="${esc(code)}">${esc(code)} — ${money(bal)} ${esc(source.satuan||'')}</option>`).join('')}</select></div>
+ ${field('qty','Jumlah Pindah',1,'required','number','0.001')}
+ <div class="form-group"><label>Kode Produksi Tujuan</label><input name="destBatch" placeholder="Opsional / sama dengan sumber"></div>
+ ${field('keterangan','Keterangan','Pindah stok antar produk')}</div></form>
+ <div class="actions"><button class="btn primary" id="saveTransfer">Simpan Pindah Stok</button></div>`);
+ $('saveTransfer').onclick=async()=>{
+   const f=new FormData($('transferForm')); const destId=f.get('destProduct'); const sourceBatch=String(f.get('sourceBatch')||'').trim(); const destBatch=String(f.get('destBatch')||sourceBatch).trim(); const qty=Number(f.get('qty')); const ket=String(f.get('keterangan')||'').trim();
+   if(!destId)return alert('Produk tujuan wajib dipilih.'); if(qty<=0)return alert('Jumlah harus lebih dari 0.'); if(sourceBatch){const bal=batches[sourceBatch]||0;if(qty>bal+1e-9)return alert(`Stok batch ${sourceBatch} hanya tersisa ${money(bal)} ${source.satuan||''}.`)}
+   try{await runTransaction(db,async tx=>{
+     const sref=doc(db,'products',sourceId), dref=doc(db,'products',destId); const ss=await tx.get(sref), ds=await tx.get(dref);
+     if(!ss.exists()||!ds.exists())throw Error('Produk sumber/tujuan tidak ditemukan.');
+     const sd=ss.data(), dd=ds.data(), sb=Number(sd.stok||0), dbefore=Number(dd.stok||0); if(qty>sb+1e-9)throw Error(`Stok ${sd.namaProduk||''} tidak mencukupi.`);
+     const sa=sb-qty, da=dbefore+qty, transferId=crypto.randomUUID?crypto.randomUUID():String(Date.now());
+     const outRef=doc(collection(db,'stock_transactions')), inRef=doc(collection(db,'stock_transactions'));
+     tx.update(sref,{stok:sa}); tx.update(dref,{stok:da});
+     tx.set(outRef,{productId:sourceId,barcode:sd.barcode||'',kodeProduk:sd.kodeProduk||'',namaProduk:sd.namaProduk||'',kodeProduksi:sourceBatch,type:'out',qty,stokSebelum:sb,stokSesudah:sa,keterangan:ket+` | Transfer ke ${dd.namaProduk||destId}`,jenisKeluar:'Transfer Produk',transferId,transferToProductId:destId,transferToProductName:dd.namaProduk||'',userId:currentUser.uid,userName:currentProfile.nama||currentUser.email,createdAt:serverTimestamp()});
+     tx.set(inRef,{productId:destId,barcode:dd.barcode||'',kodeProduk:dd.kodeProduk||'',namaProduk:dd.namaProduk||'',kodeProduksi:destBatch,type:'in',qty,stokSebelum:dbefore,stokSesudah:da,keterangan:ket+` | Transfer dari ${sd.namaProduk||sourceId}`,jenisMasuk:'Transfer Produk',transferId,transferFromProductId:sourceId,transferFromProductName:sd.namaProduk||'',userId:currentUser.uid,userName:currentProfile.nama||currentUser.email,createdAt:serverTimestamp()});
+   }); closeModal(); toast('Stok berhasil dipindahkan'); await loadProducts(); renderInventory();
+   }catch(e){alert('Gagal memindahkan stok: '+e.message)}
+ };
+};
+
 async function renderTracking(){
  await loadProducts(); await loadTransactions();
  const batchMap={};
- transactions.forEach(t=>{const code=String(t.kodeProduksi||'').trim();if(!code||!t.productId)return;const key=t.productId+'__'+code;if(!batchMap[key])batchMap[key]={productId:t.productId,kodeProduksi:code,masuk:0,keluar:0,namaProduk:t.namaProduk||'',kodeProduk:t.kodeProduk||''};if(t.type==='production')batchMap[key].masuk+=Number(t.qty||0);if(t.type==='out')batchMap[key].keluar+=Number(t.qty||0)});
+ transactions.forEach(t=>{const code=String(t.kodeProduksi||'').trim();if(!code||!t.productId)return;const key=t.productId+'__'+code;if(!batchMap[key])batchMap[key]={productId:t.productId,kodeProduksi:code,masuk:0,keluar:0,namaProduk:t.namaProduk||'',kodeProduk:t.kodeProduk||''};if(t.type==='production'||t.type==='in')batchMap[key].masuk+=Number(t.qty||0);if(t.type==='out')batchMap[key].keluar+=Number(t.qty||0)});
  const rows=Object.values(batchMap).map(b=>{const p=products.find(x=>x.id===b.productId);return {...b,satuan:p?.satuan||'MC',stok:b.masuk-b.keluar}}).filter(b=>b.stok>0.000001).sort((a,b)=>String(a.namaProduk).localeCompare(String(b.namaProduk),'id')||String(a.kodeProduksi).localeCompare(String(b.kodeProduksi)));
  const searchBox=`<input id="trackingSearch" class="search" placeholder="Cari produk / kode produksi...">`;
  const groups={};rows.forEach(r=>(groups[r.productId]||(groups[r.productId]=[])).push(r));
