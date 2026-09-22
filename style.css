@@ -31,15 +31,21 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;border:0}.hidden
 
 /* Laporan inventory per kategori */
 .report-category-card{overflow:hidden}
-.report-preview-wrap{overflow-x:auto;margin-top:14px;border:1px solid #cbd5e1;border-radius:10px}
-.report-preview{width:100%;min-width:900px;border-collapse:collapse;font-size:12px;background:#fff}
-.report-preview th,.report-preview td{border:1px solid #cbd5e1;padding:7px 8px;text-align:center;white-space:nowrap}
-.report-preview thead th{background:#1f4e79;color:#fff;font-weight:700}
-.report-preview thead .rp-title{font-size:13px}
-.report-preview .rp-date{min-width:105px}
-.report-preview .rp-note{text-align:left;min-width:180px}
-.report-preview tbody td:first-child{text-align:left;font-weight:600;background:#f8fafc}
-.report-preview .rp-in{background:#dcffd8}
-.report-preview .rp-out{background:#ffe0e0}
-.report-preview .rp-stock{background:#fff4b8;font-weight:700}
+.report-preview-wrap{overflow-x:auto;margin-top:14px;border:1px solid #94a3b8;border-radius:6px;background:#fff}
+.report-preview{width:max-content;min-width:1100px;border-collapse:collapse;font-size:12px;background:#fff}
+.report-preview th,.report-preview td{border:1px solid #64748b;padding:7px 9px;text-align:center;white-space:nowrap;height:28px}
+.report-preview thead th{font-weight:700}
+.report-preview .rp-date,.report-preview .rp-date-cell{min-width:105px}
+.report-preview .rp-in-head{background:#00ff00;color:#000;font-size:13px}
+.report-preview .rp-out-head{background:#ff0000;color:#fff;font-size:13px}
+.report-preview .rp-stock-head{background:#00ff00;color:#000;font-size:13px}
+.report-preview .rp-total-head{background:#ffff00;color:#000;min-width:95px}
+.report-preview .rp-note{background:#1f4e79;color:#fff;min-width:170px}
+.report-preview .rp-sub{background:#d9eaf7;color:#000;min-width:105px;max-width:140px;white-space:normal}
+.report-preview tbody .rp-date-cell{font-weight:700;background:#eef2f7;text-align:left}
+.report-preview .rp-in{background:#e8ffe8}
+.report-preview .rp-out{background:#ffe8e8}
+.report-preview .rp-stock{background:#e8ffe8;font-weight:700}
+.report-preview .rp-total{background:#ffff00;font-weight:700}
+.report-preview .rp-note-cell{text-align:left;min-width:170px}
 @media(max-width:700px){.report-category-card .toolbar{align-items:flex-start;flex-direction:column}.report-category-card .actions{width:100%}.report-category-card .actions .btn{flex:1}}
