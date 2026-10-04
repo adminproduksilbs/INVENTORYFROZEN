@@ -1,0 +1,61 @@
+CARA UPDATE APLIKASI INVENTORY FROZEN
+=====================================
+Folder ini berisi file hasil perbaikan & penambahan fitur
+(app.js v20, index.html, style.css).
+
+CARA PASANG (pilih salah satu):
+
+A. Via GitHub Web (paling mudah):
+   1. Buka https://github.com/adminproduksilbs/INVENTORYFROZEN
+   2. Klik file app.js > ikon pensil/pilih "Upload files" lalu drag file
+      app.js yang baru > Commit changes. Ulangi untuk index.html
+      dan style.css.
+   3. Tunggu 1-2 menit, GitHub Pages otomatis update.
+   4. Buka https://adminproduksilbs.github.io/INVENTORYFROZEN/
+      dan hard-refresh (Ctrl+Shift+R).
+
+B. Via git (di komputer):
+   1. git clone https://github.com/adminproduksilbs/INVENTORYFROZEN.git
+   2. Timpa app.js, index.html, style.css dengan file dari folder ini
+   3. git add -A && git commit -m "Update v20: perbaikan & fitur baru" && git push
+
+YANG BERUBAH DI v20:
+--------------------
+PERBAIKAN BUG:
+1. Tombol "Export Excel" di halaman Stok Masuk/Keluar kini berfungsi
+   (sebelumnya error karena fungsinya tidak ada).
+2. Tombol "Excel Transaksi" di halaman Laporan kini berfungsi.
+3. Tombol "Download PDF" Berita Acara Opname kini berfungsi dan
+   menghasilkan PDF formal (kop perusahaan, tabel hasil opname,
+   kolom tanda tangan).
+4. Menu "Inventory" yang tadinya tersembunyi kini muncul di sidebar.
+
+FITUR BARU:
+5. Stok Minimum & Peringatan Stok Menipis
+   - Form produk (tambah/edit) ada field "Stok Minimum (peringatan)".
+   - Dashboard menampilkan kartu merah "Peringatan Stok Menipis"
+     berisi daftar produk yang stoknya di bawah minimum.
+6. Filter Tanggal di Stok Masuk/Keluar
+   - Ada pilihan tanggal "dari" s/d "sampai" + tombol Reset.
+   - Default menampilkan transaksi bulan berjalan.
+7. Import Produk dari Excel/CSV
+   - Tombol "Import Excel" di Master Produk (khusus admin).
+   - Format kolom: Kode, Nama, Barcode, Kategori, Satuan,
+     Berat/Satuan, Stok, Stok LBS, Stok Minimum, Lokasi.
+   - Baris dengan Kode yang sudah ada otomatis dilewati.
+8. Kelola Kategori
+   - Tombol "Kelola Kategori" di Master Produk (khusus admin).
+   - Bisa tambah & hapus kategori.
+9. Kelola Pengguna lengkap (khusus admin)
+   - Tombol "Reset Password": mengirim email reset password
+     Firebase ke email pengguna tersebut.
+   - Tombol "Hapus": menghapus profil pengguna. Tidak bisa
+     menghapus akun sendiri.
+
+CATATAN PENTING (belum diperbaiki di v20):
+------------------------------------------
+Keamanan login operator masih lemah: PIN 4 digit divalidasi di sisi
+klien lalu login memakai satu akun Firebase bersama yang kredensialnya
+tertulis di kode JavaScript (bisa dilihat siapa pun). Perbaikan yang
+benar butuh Firebase Cloud Functions / Admin SDK — sebaiknya dikerjakan
+terpisah dengan akses ke Firebase Console.

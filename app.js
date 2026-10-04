@@ -1,5 +1,5 @@
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut,createUserWithEmailAndPassword,initializeAuth}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut,createUserWithEmailAndPassword,initializeAuth,sendPasswordResetEmail}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import{getFirestore,collection,getDocs,getDoc,doc,addDoc,setDoc,updateDoc,deleteDoc,serverTimestamp,runTransaction,writeBatch,query,orderBy,limit}from"https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const firebaseConfig={apiKey:"AIzaSyCTLUXUO1AraBgH3WO4e0izSnY319lWNyQ",authDomain:"lbs-peminjaman.firebaseapp.com",projectId:"lbs-peminjaman",storageBucket:"lbs-peminjaman.firebasestorage.app",messagingSenderId:"1036341632994",appId:"1:1036341632994:web:879fec5848a7f523d3e3bb"};
@@ -53,6 +53,7 @@ async function renderDashboard(){
   const welcome=currentProfile?.nama||currentUser?.email||'Admin';
   const roleLabel=currentProfile?.role==='admin'?'Administrator':'Operator';
   const lastSync=recent[0]?.createdAt ? dt(recent[0].createdAt) : 'Belum ada transaksi';
+  const lowStock=products.filter(p=>p.aktif!==false&&Number(p.stokMinimum||0)>0&&Number(p.stok||0)<Number(p.stokMinimum||0)).sort((a,b)=>(Number(a.stok||0)-Number(a.stokMinimum||0))-(Number(b.stok||0)-Number(b.stokMinimum||0)));
   $('todayText').textContent=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
   $('topUserName').textContent=welcome;
   $('topUserRole').textContent=roleLabel;
@@ -61,6 +62,7 @@ async function renderDashboard(){
     <div class="welcome-row">
       <div><h1>Selamat Datang, ${esc(welcome)} 👋</h1><p>Kelola stok, produksi dan inventori dengan lebih mudah dan efisien.</p></div>
     </div>
+    ${lowStock.length?`<div class="card alert-card"><div class="section-title"><div><h3>⚠️ Peringatan Stok Menipis</h3><p>${lowStock.length} produk berada di bawah stok minimum. Segera lakukan pengadaan atau produksi.</p></div><button class="link-btn" onclick="nav('products')">Lihat Produk →</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Kode</th><th>Nama Produk</th><th>Stok Saat Ini</th><th>Stok Minimum</th><th>Kekurangan</th></tr></thead><tbody>${lowStock.map(p=>`<tr><td>${esc(p.kodeProduk)}</td><td>${esc(p.namaProduk)}</td><td class="negative"><b>${money(p.stok)}</b></td><td>${money(p.stokMinimum)}</td><td class="negative"><b>${money(Number(p.stokMinimum||0)-Number(p.stok||0))}</b></td></tr>`).join('')}</tbody></table></div></div>`:''}
     <div class="stats dashboard-kpis">
       <div class="card kpi kpi-purple"><div class="kpi-icon">◉</div><div><span>Total Stok</span><strong>${money(stok)}</strong><small>total semua produk</small></div><div class="kpi-trend">↗ Terkini</div></div>
       <div class="card kpi kpi-green"><div class="kpi-icon">✓</div><div><span>Produk Aktif</span><strong>${money(aktif)}</strong><small>produk yang tersedia</small></div><div class="kpi-trend">● Aktif</div></div>
@@ -98,9 +100,11 @@ function transactionTable(rows){return `<div class="table-wrap"><table class="ta
 
 function renderProducts(){
  const admin=currentProfile.role==="admin";
- $("content").innerHTML=`<div class="card"><div class="toolbar"><div><h3>Master Produk</h3><p class="small">Data produk tersimpan di Firestore.</p></div><div class="actions">${admin?'<button class="btn primary" id="addProduct">+ Tambah Produk</button>':''}<button class="btn" id="scanProduct">📷 Scan Barcode</button><input id="productSearch" class="search" placeholder="Cari kode/barcode/nama..."></div></div><div id="productTable"></div></div>`;
+ $("content").innerHTML=`<div class="card"><div class="toolbar"><div><h3>Master Produk</h3><p class="small">Data produk tersimpan di Firestore.</p></div><div class="actions">${admin?'<button class="btn primary" id="addProduct">+ Tambah Produk</button><button class="btn blue" id="importProductBtn">⬆ Import Excel</button><button class="btn" id="manageCatBtn">🏷️ Kelola Kategori</button><input type="file" id="importProductFile" accept=".xlsx,.xls,.csv" style="display:none">':''}<button class="btn" id="scanProduct">📷 Scan Barcode</button><input id="productSearch" class="search" placeholder="Cari kode/barcode/nama..."></div></div><div id="productTable"></div></div>`;
  $("productSearch").oninput=()=>drawProducts($("productSearch").value);drawProducts("");
- if(admin)$("addProduct").onclick=()=>productForm();
+ if(admin){$("addProduct").onclick=()=>productForm();$("manageCatBtn").onclick=manageCategories;
+  $("importProductBtn").onclick=()=>$("importProductFile").click();
+  $("importProductFile").onchange=importProductsExcel;}
  $("scanProduct").onclick=()=>scanBarcode(code=>{$("productSearch").value=code;drawProducts(code)});
 }
 function drawProducts(q){
@@ -144,10 +148,49 @@ ${field("barcode","Barcode",p.barcode||"","required")} ${field("kodeProduk","Kod
 ${field("namaProduk","Nama Produk",p.namaProduk||"","required")} <div class="form-group"><label>Kategori</label><input name="kategori" list="cats" value="${esc(p.kategori||"")}" required><datalist id="cats">${categories.map(c=>`<option value="${esc(c.nama||c.id)}">`).join("")}</datalist></div>
 ${field("satuan","Satuan",p.satuan||"Bag","required")} ${field("beratPerSatuan","Berat / Satuan",p.beratPerSatuan??1,"required","number","0.001")}
 ${field("stok","Stok",p.stok??0,"required","number","0.001")} ${field("stokLbs","Stok LBS",p.stokLbs??0,"","number","0.001")}
+${field("stokMinimum","Stok Minimum (peringatan)",p.stokMinimum??0,"","number","0.001")}
 ${field("lokasi","Lokasi",p.lokasi||"Cold Storage")} <div class="form-group"><label>Status</label><select name="aktif"><option value="true" ${p.aktif!==false?"selected":""}>Aktif</option><option value="false" ${p.aktif===false?"selected":""}>Nonaktif</option></select></div>
 </div><div class="actions"><button class="btn primary">Simpan</button></div></form>`);
-$("productForm").onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target),d={barcode:f.get("barcode").trim(),kodeProduk:f.get("kodeProduk").trim(),namaProduk:f.get("namaProduk").trim(),kategori:f.get("kategori").trim(),satuan:f.get("satuan").trim(),beratPerSatuan:Number(f.get("beratPerSatuan")),stok:Number(f.get("stok")),stokLbs:Number(f.get("stokLbs")),lokasi:f.get("lokasi").trim(),aktif:f.get("aktif")==="true",updatedAt:serverTimestamp()};try{id?await updateDoc(doc(db,"products",id),d):await addDoc(collection(db,"products"),{...d,createdAt:serverTimestamp()});closeModal();toast("Produk tersimpan");renderProducts()}catch(err){alert("Gagal menyimpan: "+err.message)}}}
+$("productForm").onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target),d={barcode:f.get("barcode").trim(),kodeProduk:f.get("kodeProduk").trim(),namaProduk:f.get("namaProduk").trim(),kategori:f.get("kategori").trim(),satuan:f.get("satuan").trim(),beratPerSatuan:Number(f.get("beratPerSatuan")),stok:Number(f.get("stok")),stokLbs:Number(f.get("stokLbs")),stokMinimum:Number(f.get("stokMinimum")||0),lokasi:f.get("lokasi").trim(),aktif:f.get("aktif")==="true",updatedAt:serverTimestamp()};try{id?await updateDoc(doc(db,"products",id),d):await addDoc(collection(db,"products"),{...d,createdAt:serverTimestamp()});closeModal();toast("Produk tersimpan");renderProducts()}catch(err){alert("Gagal menyimpan: "+err.message)}}}
 window.removeProduct=async id=>{if(!confirm("Hapus produk ini?"))return;await deleteDoc(doc(db,"products",id));toast("Produk dihapus");renderProducts()}
+async function importProductsExcel(e){
+ const file=e.target.files[0];e.target.value="";if(!file)return;
+ if(!window.XLSX)return alert('Library Excel belum termuat');
+ try{
+  const buf=await file.arrayBuffer(),wb=XLSX.read(buf),ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{defval:""});
+  if(!rows.length)return alert('File kosong / tidak ada data');
+  const norm=h=>String(h||"").toLowerCase().replace(/[^a-z]/g,"");
+  const get=(r,...names)=>{for(const k of Object.keys(r)){if(names.includes(norm(k)))return r[k]}return ""};
+  const existing=new Set(products.map(p=>String(p.kodeProduk||"").toLowerCase()));
+  let added=0,skipped=0;
+  for(const r of rows){
+   const kodeProduk=String(get(r,"kodeproduk","kode","sku")||"").trim();
+   if(!kodeProduk||existing.has(kodeProduk.toLowerCase())){skipped++;continue}
+   await addDoc(collection(db,"products"),{barcode:String(get(r,"barcode")||"").trim(),kodeProduk,
+    namaProduk:String(get(r,"namaproduk","nama","namabarang")||kodeProduk).trim(),
+    kategori:String(get(r,"kategori")||"Lainnya").trim(),satuan:String(get(r,"satuan","unit")||"Bag").trim(),
+    beratPerSatuan:Number(get(r,"beratpersatuan","berat")||1)||1,stok:Number(get(r,"stok","jumlah")||0)||0,
+    stokLbs:Number(get(r,"stoklbs")||0)||0,stokMinimum:Number(get(r,"stokminimum","minimum")||0)||0,
+    lokasi:String(get(r,"lokasi")||"Cold Storage").trim(),aktif:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+   existing.add(kodeProduk.toLowerCase());added++;
+  }
+  toast(`Import selesai: ${added} ditambahkan, ${skipped} dilewati`);renderProducts();
+ }catch(err){alert("Gagal import: "+err.message)}
+}
+async function manageCategories(){
+ await loadCategories();
+ openModal(`<h2>🏷️ Kelola Kategori</h2><div class="table-wrap"><table class="table"><thead><tr><th>Nama Kategori</th><th style="width:110px">Aksi</th></tr></thead><tbody>${categories.map(c=>`<tr><td>${esc(c.nama||c.id)}</td><td><button class="btn red" onclick="deleteCategory('${c.id}')">Hapus</button></td></tr>`).join("")||'<tr><td colspan="2" class="empty">Belum ada kategori.</td></tr>'}</tbody></table></div><form id="catForm"><div class="form-grid">${field("namaKategori","Nama Kategori Baru","","required")}</div><div class="actions"><button class="btn primary">+ Tambah Kategori</button></div></form>`);
+ $("catForm").onsubmit=async e=>{e.preventDefault();const n=new FormData(e.target).get("namaKategori").trim();if(!n)return;
+  if(categories.some(c=>String(c.nama||"").toLowerCase()===n.toLowerCase()))return alert("Kategori sudah ada");
+  await addDoc(collection(db,"categories"),{nama:n,createdAt:serverTimestamp()});toast("Kategori ditambahkan");manageCategories();};
+}
+window.deleteCategory=async id=>{
+ const c=categories.find(x=>x.id===id),nm=c?.nama||id;
+ const used=products.filter(p=>String(p.kategori||"")===String(c?.nama||"")).length;
+ if(!confirm(`Hapus kategori "${nm}"?${used?` (${used} produk memakai kategori ini — produk tidak ikut terhapus).`:""}`))return;
+ await deleteDoc(doc(db,"categories",id));toast("Kategori dihapus");manageCategories();
+}
 function field(n,l,v,req="",type="text",step=""){return `<div class="form-group"><label>${l}</label><input name="${n}" type="${type}" value="${esc(v)}" ${req} ${step?`step="${step}"`:""}></div>`}
 
 async function renderInventory(){await loadProducts();$("content").innerHTML=`<div class="card"><div class="toolbar"><div><h3>Inventory</h3><p class="small">Stok terkini seluruh produk.</p></div><input id="invSearch" class="search" placeholder="Cari produk..."></div><div id="invTable"></div></div>`;drawInv("");$("invSearch").oninput=e=>drawInv(e.target.value)}
@@ -247,7 +290,18 @@ async function renderProduction(){
  $("prodForm").onsubmit=async e=>{e.preventDefault();if(!selected)return alert("Scan barcode atau pilih produk terlebih dahulu.");let f=new FormData(e.target),qty=Number(f.get("qty"));if(qty<=0)return alert("Jumlah produksi harus lebih dari 0");let tanggal=f.get("tanggal"),shift=f.get("shift"),kodeProduksi=f.get("kodeProduksi").trim(),ket=f.get("keterangan").trim();
  if(!kodeProduksi)return alert("Kode Produksi wajib diisi.");try{await runTransaction(db,async tx=>{let ref=doc(db,"products",selected.id),snap=await tx.get(ref);if(!snap.exists())throw Error("Produk tidak ditemukan");let d=snap.data(),before=Number(d.stok||0),after=before+qty,tr=doc(collection(db,"stock_transactions"));tx.update(ref,{stok:after});tx.set(tr,{productId:selected.id,barcode:d.barcode||"",kodeProduk:d.kodeProduk||"",namaProduk:d.namaProduk||"",type:"production",kodeProduksi,qty,stokSebelum:before,stokSesudah:after,tanggalProduksi:tanggal,shift,keterangan:ket,userId:currentUser.uid,userName:currentProfile.nama||currentUser.email,createdAt:serverTimestamp()})});toast("Stok produksi berhasil ditambahkan");selected=null;await renderProduction()}catch(err){alert("Gagal: "+err.message)}};
 }
-async function renderTransactions(){await loadTransactions();await loadProducts();$("content").innerHTML=`<div class="card"><div class="toolbar"><div><h3>Stok Masuk / Keluar</h3><p class="small">Kelola pengeluaran dan perpindahan stok dari sini.</p></div><div class="actions"><button class="btn red" id="trxOut">− Keluarkan Stok</button><button class="btn blue" id="trxTransfer">⇄ Pindah Stok</button><button class="btn blue" id="exportTrx">Export Excel</button></div></div>${transactionTable(transactions)}</div>`;
+async function renderTransactions(){await loadTransactions();await loadProducts();
+ const tgl=new Date(),awal=new Date(tgl.getFullYear(),tgl.getMonth(),1);
+ const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+ $("content").innerHTML=`<div class="card"><div class="toolbar"><div><h3>Stok Masuk / Keluar</h3><p class="small">Kelola pengeluaran dan perpindahan stok dari sini.</p></div><div class="actions"><button class="btn red" id="trxOut">− Keluarkan Stok</button><button class="btn blue" id="trxTransfer">⇄ Pindah Stok</button><button class="btn blue" id="exportTrx">Export Excel</button></div></div>
+ <div class="toolbar" style="margin-top:4px"><div class="small">Filter tanggal:</div><div class="actions"><input type="date" id="trxFrom" value="${iso(awal)}" class="search" style="width:auto"><span class="small">s/d</span><input type="date" id="trxTo" value="${iso(tgl)}" class="search" style="width:auto"><button class="btn" id="trxResetFilter">Reset</button></div></div>
+ <div id="trxTable"></div></div>`;
+ const draw=()=>{const from=$("trxFrom").value,to=$("trxTo").value;
+  const rows=transactions.filter(t=>{let d=t.createdAt?.toDate?t.createdAt.toDate():(t.createdAt?new Date(t.createdAt):null);if(!d||isNaN(d))return true;const k=iso(d);return(!from||k>=from)&&(!to||k<=to);});
+  $("trxTable").innerHTML=transactionTable(rows)};
+ $("trxFrom").onchange=draw;$("trxTo").onchange=draw;
+ $("trxResetFilter").onclick=()=>{$("trxFrom").value="";$("trxTo").value="";draw()};
+ draw();
  $("trxOut").onclick=()=>openTransactionPicker("Keluarkan Stok",p=>stockForm(p.id,"out"));
  $("trxTransfer").onclick=()=>openTransactionPicker("Pilih Produk Sumber",p=>transferStockForm(p.id));
  $("exportTrx").onclick=()=>exportExcel(transactions.map(t=>({Tanggal:dt(t.createdAt),Kode:t.kodeProduk,KodeProduksi:t.kodeProduksi||"",Nama:t.namaProduk,Barcode:t.barcode,Jenis:t.type,Qty:t.qty,Sebelum:t.stokSebelum,Sesudah:t.stokSesudah,Keterangan:t.keterangan,User:t.userName})), "Riwayat_Stok")}
@@ -490,6 +544,14 @@ function exportAllCategoriesExcel(){
   for(const category of reportCategories()){const data=categoryReportData(category),ws=XLSX.utils.aoa_to_sheet(buildReportAoa(data));styleInventorySheet(ws,data);XLSX.utils.book_append_sheet(wb,ws,safeSheetName(category));}
   XLSX.writeFile(wb,`Laporan_Inventory_Semua_Kategori_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
+function exportExcel(rows,sheetName){
+  if(!window.XLSX)return alert('Library Excel belum termuat');
+  if(!rows||!rows.length)return alert('Tidak ada data untuk diekspor');
+  const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=Object.keys(rows[0]).map(()=>({wch:20}));
+  XLSX.utils.book_append_sheet(wb,ws,safeSheetName(sheetName||'Data'));
+  XLSX.writeFile(wb,`${safeSheetName(sheetName||'Data')}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
 function pdfBodyAndHead(data){
   const ps=data.products,rows=reportTableRows(data),n=Math.max(ps.length,1);
   const head=[[
@@ -519,13 +581,53 @@ function makeAllCategoriesPDF(){
   cats.forEach((category,idx)=>{if(idx)pdf.addPage();const data=categoryReportData(category),{head,body}=pdfBodyAndHead(data);pdf.setFontSize(17);pdf.text('PT LAMPUNG BAY SEAFOOD',210,12,{align:'center'});pdf.setFontSize(15);pdf.text(`INVENTORY ${category}`,210,20,{align:'center'});pdf.setFontSize(9);pdf.text('PRODUCTION — UPDATE INVENTORY',14,27);const n=Math.max(data.products.length,1);pdf.autoTable({startY:30,head,body,theme:'grid',styles:{fontSize:7,cellPadding:2,halign:'center',valign:'middle'},headStyles:{fillColor:[31,78,121],textColor:255,fontStyle:'bold'},columnStyles:{0:{cellWidth:22},[1+3*n]:{cellWidth:24},[2+3*n]:{cellWidth:42,halign:'left'}},didParseCell:d=>{if(d.section==='body'){const c=d.column.index;if(c>=1&&c<=n)d.cell.styles.fillColor=[232,255,232];else if(c>n&&c<=2*n)d.cell.styles.fillColor=[255,232,232];else if(c>2*n&&c<=3*n){d.cell.styles.fillColor=[232,255,232];d.cell.styles.fontStyle='bold';}else if(c===1+3*n)d.cell.styles.fillColor=[255,255,0];}}});});
   pdf.save(`Laporan_Inventory_Semua_Kategori_${new Date().toISOString().slice(0,10)}.pdf`);
 }
+async function makeOpnamePDF(id){
+  const {jsPDF}=window.jspdf;if(!jsPDF)return alert('Library PDF belum termuat');
+  const o=opnames.find(x=>x.id===id);if(!o)return alert('Opname tidak ditemukan');
+  const snap=await getDocs(collection(db,"opnames",id,"details"));
+  const ds=snap.docs.map(x=>({id:x.id,...x.data()}));
+  const pdf=new jsPDF('p','mm','a4');
+  pdf.setFontSize(16);pdf.text('PT LAMPUNG BAY SEAFOOD',105,14,{align:'center'});
+  pdf.setFontSize(13);pdf.text('BERITA ACARA STOK OPNAME',105,22,{align:'center'});
+  pdf.setFontSize(10);
+  pdf.text(`Nomor: ${o.nomor||'-'}`,14,32);
+  pdf.text(`Tanggal: ${dt(o.tanggal||o.createdAt)}`,14,38);
+  pdf.text(`Lokasi: ${o.lokasi||'-'}`,14,44);
+  pdf.text(`Status: ${(o.status||'').toUpperCase()}`,14,50);
+  pdf.text(`Dibuat oleh: ${o.createdByName||'-'}`,120,32);
+  if(o.finalizedByName)pdf.text(`Difinalisasi oleh: ${o.finalizedByName}`,120,38);
+  pdf.autoTable({startY:56,
+    head:[['No','Barcode','Kode','Nama Produk','Stok Sistem','Stok Fisik','Selisih','Catatan']],
+    body:ds.map((d,i)=>[i+1,d.barcode||'-',d.kodeProduk||'-',d.namaProduk||'-',money(d.systemStock),money(d.physicalStock),money(d.difference),d.note||'-']),
+    theme:'grid',styles:{fontSize:8,halign:'center',valign:'middle'},headStyles:{fillColor:[31,78,121],textColor:255,fontStyle:'bold'},
+    columnStyles:{3:{halign:'left'},7:{halign:'left'}},
+    didParseCell:d=>{if(d.section==='body'&&d.column.index===6){const v=Number(ds[d.row.index]?.difference||0);d.cell.styles.textColor=v<0?[200,0,0]:v>0?[0,130,0]:[0,0,0];d.cell.styles.fontStyle='bold';}}
+  });
+  const y=pdf.lastAutoTable.finalY+14;
+  pdf.setFontSize(10);
+  pdf.text('Mengetahui,',14,y);pdf.text('Yang membuat,',130,y);
+  pdf.text('( ............................ )',14,y+22);pdf.text('( ............................ )',130,y+22);
+  pdf.save(`Berita_Acara_Opname_${String(o.nomor||id).replace(/[^A-Za-z0-9]+/g,'_')}.pdf`);
+}
 async function renderReports(){
   await loadProducts();await loadTransactions();await loadOpnames();const cats=reportCategories();
   const preview=(data)=>{const ps=data.products,rows=reportTableRows(data),n=Math.max(ps.length,1);return `<div class="report-preview-wrap"><table class="report-preview"><thead><tr><th rowspan="2" class="rp-date">Tanggal</th><th colspan="${n}" class="rp-in-head">IN</th><th colspan="${n}" class="rp-out-head">OUT</th><th colspan="${n}" class="rp-stock-head">TOTAL STOK</th><th rowspan="2" class="rp-total-head">${totalHeaderLabel(ps)}</th><th rowspan="2" class="rp-note">Note</th></tr><tr>${ps.map(p=>`<th class="rp-sub">${esc(p.namaProduk||p.kodeProduk||'Produk')} (${unitLabel(p)})</th>`).join('')}${ps.map(p=>`<th class="rp-sub">${esc(p.namaProduk||p.kodeProduk||'Produk')} (${unitLabel(p)})</th>`).join('')}${ps.map(p=>`<th class="rp-sub">${esc(p.namaProduk||p.kodeProduk||'Produk')} (${unitLabel(p)})</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr><td class="rp-date-cell">${r.tanggal}</td>${r.masuk.map(v=>`<td class="rp-in">${v||'-'}</td>`).join('')}${r.keluar.map(v=>`<td class="rp-out">${v||'-'}</td>`).join('')}${r.stok.map(v=>`<td class="rp-stock">${v||'-'}</td>`).join('')}<td class="rp-total">${esc(r.totalStockLabel||'-')}</td><td class="rp-note-cell">${esc(r.note||'')}</td></tr>`).join('')}</tbody></table></div>`;};
   $('content').innerHTML=`<div class="card"><div class="toolbar"><div><h3>📊 Laporan Inventory per Kategori</h3><p class="small">Format mengikuti laporan inventory: satu baris per tanggal, kelompok IN, OUT, TOTAL STOK, dan Note. Satuan mengikuti data produk (MC/BAG/dll.).</p></div><div class="actions"><button class="btn blue" id="allCatExcel">⬇ Excel Semua Kategori</button><button class="btn primary" id="allCatPdf">⬇ PDF Semua Kategori</button></div></div></div>${cats.map(c=>{const d=categoryReportData(c);const totalLabel=categoryUnitSummary(d.products,Object.fromEntries(d.products.map(p=>[p.id,Number(p.stok||0)])));return `<div class="card report-category-card"><div class="toolbar"><div><h3>📦 ${esc(c)}</h3><p class="small">${d.products.length} produk • Total stok saat ini: <b>${esc(totalLabel)}</b></p></div><div class="actions"><button class="btn blue cat-excel" data-cat="${encodeURIComponent(c)}">📊 Download Excel</button><button class="btn primary cat-pdf" data-cat="${encodeURIComponent(c)}">📄 Download PDF</button></div></div>${preview(d)}</div>`}).join('')||'<div class="card"><p>Belum ada produk/kategori.</p></div>'}<div class="grid" style="margin-top:14px"><div class="card"><h3>🔄 Laporan Transaksi</h3><p>Download seluruh riwayat stok.</p><button class="btn blue" id="exTrx">Excel Transaksi</button></div><div class="card"><h3>📝 Berita Acara Opname</h3><p>Pilih opname final/draft lalu cetak PDF.</p><select id="opSelect" style="padding:10px;width:100%;margin:10px 0"><option value="">Pilih opname</option>${opnames.map(o=>`<option value="${o.id}">${esc(o.nomor)} - ${esc(o.lokasi)}</option>`).join('')}</select><button class="btn primary" id="pdfOp">Download PDF</button></div></div>`;
   $('allCatExcel').onclick=exportAllCategoriesExcel;$('allCatPdf').onclick=makeAllCategoriesPDF;document.querySelectorAll('.cat-excel').forEach(b=>b.onclick=()=>exportCategoryExcel(categoryReportData(decodeURIComponent(b.dataset.cat))));document.querySelectorAll('.cat-pdf').forEach(b=>b.onclick=()=>makeCategoryPDF(categoryReportData(decodeURIComponent(b.dataset.cat))));$('exTrx').onclick=()=>exportExcel(transactions.map(t=>({Tanggal:dt(t.createdAt),Kode:t.kodeProduk,Nama:t.namaProduk,Jenis:t.type,Qty:t.qty,Sebelum:t.stokSebelum,Sesudah:t.stokSesudah,Keterangan:t.keterangan,User:t.userName})),"Transaksi");$('pdfOp').onclick=()=>{let id=$('opSelect').value;if(id)makeOpnamePDF(id);else alert('Pilih opname dulu')};
 }
-async function renderUsers(){await loadCategories();let us=(await getDocs(collection(db,"users"))).docs.map(x=>({id:x.id,...x.data()}));$("content").innerHTML=`<div class="card"><div class="toolbar"><div><h3>Pengguna</h3><p class="small">Kelola profil role yang sudah memiliki akun Authentication.</p></div><button class="btn primary" id="newUser">+ Buat Operator</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Aktif</th><th>Aksi</th></tr></thead><tbody>${us.map(u=>`<tr><td>${esc(u.nama)}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td><td>${u.aktif?"Aktif":"Nonaktif"}</td><td><button class="btn" onclick="editUser('${u.id}')">Edit</button></td></tr>`).join("")}</tbody></table></div></div>`;$("newUser").onclick=newUser}
+async function renderUsers(){await loadCategories();let us=(await getDocs(collection(db,"users"))).docs.map(x=>({id:x.id,...x.data()}));$("content").innerHTML=`<div class="card"><div class="toolbar"><div><h3>Pengguna</h3><p class="small">Kelola profil role yang sudah memiliki akun Authentication.</p></div><button class="btn primary" id="newUser">+ Buat Operator</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Aktif</th><th>Aksi</th></tr></thead><tbody>${us.map(u=>`<tr><td>${esc(u.nama)}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td><td>${u.aktif?"Aktif":"Nonaktif"}</td><td><button class="btn" onclick="editUser('${u.id}')">Edit</button> <button class="btn blue" onclick="resetUserPassword('${u.id}')">Reset Password</button> <button class="btn red" onclick="deleteUser('${u.id}')">Hapus</button></td></tr>`).join("")}</tbody></table></div></div>`;$("newUser").onclick=newUser}
+window.resetUserPassword=async id=>{
+ const u=(await getDoc(doc(db,"users",id))).data();
+ if(!u?.email)return alert("Email pengguna tidak ditemukan");
+ if(!confirm(`Kirim email reset password ke ${u.email}?`))return;
+ try{await sendPasswordResetEmail(auth,u.email);toast("Email reset password terkirim ke "+u.email)}catch(err){alert("Gagal mengirim: "+err.message)}
+};
+window.deleteUser=async id=>{
+ const u=(await getDoc(doc(db,"users",id))).data();
+ if(id===currentUser?.uid)return alert("Tidak dapat menghapus akun sendiri");
+ if(!confirm(`Hapus pengguna "${u?.nama||u?.email||id}"?\n\nProfil di Firestore akan dihapus. Catatan: akun login di Firebase Authentication harus dihapus manual melalui Firebase Console.`))return;
+ await deleteDoc(doc(db,"users",id));toast("Pengguna dihapus");renderUsers();
+};
 async function newUser(){openModal(`<h2>Buat Akun Operator</h2><div class="notice">Akun dibuat melalui Firebase Authentication, lalu profil operator disimpan ke Firestore.</div><form id="userForm"><div class="form-grid">${field("nama","Nama","","required")}${field("email","Email","","required","email")}${field("password","Password","","required","password")}</div><div class="actions"><button class="btn primary">Buat Akun</button></div></form>`);$("userForm").onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target);try{const secondary=initializeApp(firebaseConfig,"secondary-"+Date.now());const a2=getAuth(secondary);let cred=await createUserWithEmailAndPassword(a2,f.get("email"),f.get("password"));await setDoc(doc(db,"users",cred.user.uid),{nama:f.get("nama"),email:f.get("email"),role:"operator",aktif:true,createdAt:serverTimestamp()});await signOut(a2);closeModal();toast("Operator berhasil dibuat");renderUsers()}catch(err){alert("Gagal membuat operator: "+err.message)}}}
 window.editUser=async id=>{let s=await getDoc(doc(db,"users",id)),u=s.data();openModal(`<h2>Edit Pengguna</h2><form id="editUser"><div class="form-grid">${field("nama","Nama",u.nama||"","required")}${field("email","Email",u.email||"","required","email")}<div class="form-group"><label>Role</label><select name="role"><option value="admin" ${u.role==="admin"?"selected":""}>Admin</option><option value="operator" ${u.role==="operator"?"selected":""}>Operator</option></select></div><div class="form-group"><label>Status</label><select name="aktif"><option value="true" ${u.aktif!==false?"selected":""}>Aktif</option><option value="false" ${u.aktif===false?"selected":""}>Nonaktif</option></select></div></div><div class="actions"><button class="btn primary">Simpan</button></div></form>`);$("editUser").onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target);await updateDoc(doc(db,"users",id),{nama:f.get("nama"),email:f.get("email"),role:f.get("role"),aktif:f.get("aktif")==="true",updatedAt:serverTimestamp()});closeModal();toast("Pengguna diperbarui");renderUsers()}}
 function scanBarcode(callback){openModal(`<h2>Scan Barcode</h2><div id="reader" style="width:100%"></div><p class="small">Izinkan akses kamera. Fitur membutuhkan HTTPS.</p>`);let qr=new Html5Qrcode("reader");qr.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:150}},code=>{qr.stop().catch(()=>{});closeModal();callback(code)},()=>{}).catch(e=>{$("reader").innerHTML="<p class='error'>Kamera tidak dapat dibuka. Pastikan browser mengizinkan kamera dan situs menggunakan HTTPS.</p>"})}

@@ -49,3 +49,5 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;border:0}.hidden
 .report-preview .rp-total{background:#ffff00;font-weight:700}
 .report-preview .rp-note-cell{text-align:left;min-width:170px}
 @media(max-width:700px){.report-category-card .toolbar{align-items:flex-start;flex-direction:column}.report-category-card .actions{width:100%}.report-category-card .actions .btn{flex:1}}
+.alert-card{border-left:5px solid #e11d48;background:linear-gradient(135deg,#fff5f6,#fff);margin-bottom:16px}
+.alert-card h3{color:#b3123a}
